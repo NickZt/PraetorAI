@@ -1,0 +1,151 @@
+// ═══════════════════════════════════════════════
+// NODE TYPES
+// ═══════════════════════════════════════════════
+
+// Первоисточники
+CREATE CONSTRAINT source_document_id IF NOT EXISTS 
+FOR (d:SourceDocument) REQUIRE d.id IS UNIQUE;
+
+(:SourceDocument {
+  id: "paper_2024_fog_computing",
+  title: "Fog Computing Architecture for DSA",
+  type: "academic_paper",
+  authors: ["Author1", "Author2"],
+  year: 2024,
+  venue: "IEEE Conference",
+  doi: "10.1234/...",
+  pdf_path: "/vault/sources/paper.pdf",
+  bibtex_key: "@inproceedings{...",
+  date_added: datetime(),
+  tags: ["fog-computing", "military", "edge-ai"]
+})
+
+// Ваші концепції (розвиваються)
+CREATE CONSTRAINT concept_id IF NOT EXISTS 
+FOR (c:Concept) REQUIRE c.id IS UNIQUE;
+
+(:Concept {
+  id: "concept_distributed_inference",
+  name: "Distributed Inference on Fog Nodes",
+  description: "...",
+  maturity: "developing", // seed/developing/mature
+  first_mentioned: datetime("2023-06-15"),
+  last_updated: datetime(),
+  current_version: 3,
+  status: "active", // active/archived/merged
+  parent_concepts: ["fog-computing", "ml-inference"],
+  tags: ["core-research", "military-application"]
+})
+
+// Версії концепцій (snapshot evolution)
+(:ConceptVersion {
+  concept_id: "concept_distributed_inference",
+  version: 3,
+  date: datetime(),
+  description: "Added latency optimization...",
+  key_insights: ["..."],
+  related_work: ["paper_id_1", "paper_id_2"],
+  notebook_refs: ["daily_2024_02_10"]
+})
+
+// Ваші робочі документи (papers, proposals, notes)
+(:WorkDocument {
+  id: "proposal_nato_2024",
+  title: "NATO Research Proposal 2024",
+  type: "grant_proposal",
+  status: "in_progress",
+  created: datetime(),
+  file_path: "/vault/work/proposal.md",
+  related_concepts: ["concept_id_1", "concept_id_2"]
+})
+
+// Експерименти та результати
+(:Experiment {
+  id: "exp_latency_test_2024",
+  name: "Fog Node Latency Optimization",
+  date: datetime(),
+  hypothesis: "...",
+  results: {...},
+  conclusion: "...",
+  code_repo: "github.com/...",
+  related_concepts: ["concept_distributed_inference"]
+})
+
+// Наукові напрямки (domains/fields)
+(:ResearchArea {
+  id: "fog_computing",
+  name: "Fog Computing",
+  description: "...",
+  parent_area: "distributed_systems"
+})
+
+// ═══════════════════════════════════════════════
+// RELATIONSHIP TYPES
+// ═══════════════════════════════════════════════
+
+// Citation relationships
+(source1:SourceDocument)-[:CITES {
+  context: "Used their methodology...",
+  citation_count: 5,
+  importance: "high"
+}]->(source2:SourceDocument)
+
+// Concept inspiration from sources
+(concept:Concept)-[:INSPIRED_BY {
+  date: datetime(),
+  influence_level: "high",
+  specific_ideas: ["algorithm design", "architecture"],
+  notes: "Their approach to X influenced my design of Y"
+}]->(source:SourceDocument)
+
+// Concept evolution
+(newer:ConceptVersion)-[:EVOLVED_FROM {
+  changes: ["added optimization", "fixed limitation"],
+  reason: "Based on experiment results"
+}]->(older:ConceptVersion)
+
+// Concept relationships
+(concept1:Concept)-[:BUILDS_ON {
+  relationship: "extends",
+  description: "..."
+}]->(concept2:Concept)
+
+(concept1:Concept)-[:CONTRADICTS {
+  reason: "Different assumptions",
+  resolution: "pending"
+}]->(concept2:Concept)
+
+(concept1:Concept)-[:MERGES_INTO {
+  date: datetime(),
+  reason: "Unified under broader framework"
+}]->(concept2:Concept)
+
+// Concept validation
+(experiment:Experiment)-[:VALIDATES {
+  confidence: 0.85,
+  conditions: ["tested on X platform", "sample size Y"]
+}]->(concept:Concept)
+
+(experiment:Experiment)-[:CHALLENGES {
+  findings: "...",
+  implications: "..."
+}]->(concept:Concept)
+
+// Work document connections
+(work:WorkDocument)-[:APPLIES {
+  sections: ["methodology", "related work"],
+  contribution: "..."
+}]->(concept:Concept)
+
+(work:WorkDocument)-[:CITES]->(source:SourceDocument)
+
+// Research area taxonomy
+(concept:Concept)-[:BELONGS_TO]->(area:ResearchArea)
+(area1:ResearchArea)-[:SUBAREA_OF]->(area2:ResearchArea)
+
+// Trend detection (temporal)
+(concept:Concept)-[:TRENDING_IN {
+  period: "2024-Q1",
+  growth_rate: 0.3,
+  citation_velocity: 15
+}]->(area:ResearchArea)
