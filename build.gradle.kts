@@ -16,23 +16,23 @@ subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
     dependencies {
-        implementation(platform("io.vertx:vertx-stack-depchain:4.5.8"))
-        implementation("io.vertx:vertx-core")
-        implementation("io.vertx:vertx-lang-kotlin")
-        implementation("io.vertx:vertx-lang-kotlin-coroutines")
+        add("implementation", platform("io.vertx:vertx-stack-depchain:4.5.8"))
+        add("implementation", "io.vertx:vertx-core")
+        add("implementation", "io.vertx:vertx-lang-kotlin")
+        add("implementation", "io.vertx:vertx-lang-kotlin-coroutines")
         
-        implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
-        implementation("ch.qos.logback:logback-classic:1.4.14")
+        add("implementation", "io.github.microutils:kotlin-logging-jvm:3.0.5")
+        add("implementation", "ch.qos.logback:logback-classic:1.4.14")
         
-        testImplementation("io.vertx:vertx-junit5")
-        testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
-        testImplementation("io.mockk:mockk:1.13.10")
-        testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
+        add("testImplementation", "io.vertx:vertx-junit5")
+        add("testImplementation", "org.junit.jupiter:junit-jupiter:5.10.1")
+        add("testImplementation", "io.mockk:mockk:1.13.10")
+        add("testImplementation", "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions {
-            jvmTarget = "21"
+            jvmTarget = "17"
             freeCompilerArgs = listOf("-Xjsr305=strict")
         }
     }

@@ -1,4 +1,4 @@
-package com.tactorder.rdss.agent.curator
+package com.tactorder.rdss.ingestion.curator
 
 /**
  * Extracts citations from text using regex patterns.

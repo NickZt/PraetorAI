@@ -11,6 +11,7 @@ coroutines = "1.8.0"
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 
+vertx-core = { module = "io.vertx:vertx-core", version.ref = "vertx" }
 vertx-web = { module = "io.vertx:vertx-web", version.ref = "vertx" }
 vertx-mongo = { module = "io.vertx:vertx-mongo-client", version.ref = "vertx" }
 vertx-config = { module = "io.vertx:vertx-config", version.ref = "vertx" }
