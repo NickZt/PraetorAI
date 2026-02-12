@@ -1,142 +1,49 @@
 version: '3.8'
 
 services:
-  # Neo4j Graph Database
   neo4j:
-    image: neo4j:5.21-community
+    image: neo4j:5.21.0
     container_name: rdss-neo4j
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474"
+      - "7687:7687"
     environment:
       NEO4J_AUTH: neo4j/password
-      NEO4J_dbms_default__database: rdss
-      NEO4J_dbms_memory_heap_initial__size: 512m
-      NEO4J_dbms_memory_heap_max__size: 2G
-      NEO4J_dbms_memory_pagecache_size: 1G
-      NEO4J_dbms_security_procedures_unrestricted: gds.*,apoc.*
-      NEO4J_dbms_security_procedures_allowlist: gds.*,apoc.*
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_apoc_export_file_enabled: "true"
+      NEO4J_apoc_import_file_enabled: "true"
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
     volumes:
-      - neo4j_data:/data
-      - neo4j_logs:/logs
-      - neo4j_import:/var/lib/neo4j/import
-      - ./neo4j-init.cypher:/var/lib/neo4j/import/neo4j-init.cypher
-    networks:
-      - rdss-network
-    restart: unless-stopped
+      - ./data/neo4j/data:/data
+      - ./data/neo4j/logs:/logs
+      - ./data/neo4j/import:/var/lib/neo4j/import
+      - ./data/neo4j/plugins:/plugins
 
-  # MongoDB Document Database
   mongodb:
     image: mongo:7.0
-    container_name: rdss-mongodb
+    container_name: rdss-mongo
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
       MONGO_INITDB_DATABASE: rdss_documents
     volumes:
-      - mongodb_data:/data/db
-      - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongodb-init.js:ro
-    networks:
-      - rdss-network
-    restart: unless-stopped
+      - ./data/mongo/db:/data/db
+      - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
-  # Redis Cache
-  redis:
-    image: redis:7.2-alpine
-    container_name: rdss-redis
-    ports:
-      - "6379:6379"
-    command: redis-server --appendonly yes --requirepass password
-    volumes:
-      - redis_data:/data
-    networks:
-      - rdss-network
-    restart: unless-stopped
+  # redis:
+  #   image: redis:7.2
+  #   container_name: rdss-redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - ./data/redis:/data
 
-  # Weaviate Vector Database
-  weaviate:
-    image: semitechnologies/weaviate:1.25.0
-    container_name: rdss-weaviate
-    ports:
-      - "8080:8080"
-    environment:
-      QUERY_DEFAULTS_LIMIT: 25
-      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-      DEFAULT_VECTORIZER_MODULE: 'none'
-      ENABLE_MODULES: 'text2vec-openai,generative-openai,qna-openai'
-      CLUSTER_HOSTNAME: 'node1'
-    volumes:
-      - weaviate_data:/var/lib/weaviate
-    networks:
-      - rdss-network
-    restart: unless-stopped
-
-  # Ollama for Local LLM Inference
-  ollama:
-    image: ollama/ollama:latest
-    container_name: rdss-ollama
-    ports:
-      - "11434:11434"
-    environment:
-      OLLAMA_MODELS: /models
-    volumes:
-      - ollama_data:/root/.ollama
-      - ./ollama-models:/models:ro
-    networks:
-      - rdss-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-  # RDSS Application
-  rdss-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: rdss-app
-    ports:
-      - "8081:8080"
-    environment:
-      SPRING_DATA_NEO4J_URI: bolt://neo4j:7687
-      SPRING_DATA_NEO4J_AUTHENTICATION_USERNAME: neo4j
-      SPRING_DATA_NEO4J_AUTHENTICATION_PASSWORD: password
-      SPRING_DATA_MONGODB_HOST: mongodb
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      WEAVIATE_HOST: weaviate
-      WEAVIATE_PORT: 8080
-      OLLAMA_BASE_URL: http://ollama:11434
-    depends_on:
-      - neo4j
-      - mongodb
-      - redis
-      - weaviate
-      - ollama
-    networks:
-      - rdss-network
-    restart: unless-stopped
-    volumes:
-      - ./documents:/app/documents
-      - ./logs:/app/logs
-
-volumes:
-  neo4j_data:
-  neo4j_logs:
-  neo4j_import:
-  mongodb_data:
-  redis_data:
-  weaviate_data:
-  ollama_data:
-
-networks:
-  rdss-network:
-    driver: bridge
+# Ollama is expected to run on the host machine for GPU access.
+# If running in container is required, uncomment below (CPU only by default unless --gpus passed)
+#  ollama:
+#    image: ollama/ollama:latest
+#    container_name: rdss-ollama
+#    ports:
+#      - "11434:11434"
+#    volumes:
+#      - ./data/ollama:/root/.ollama
