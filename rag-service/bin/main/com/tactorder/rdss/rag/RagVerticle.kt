@@ -1,7 +1,7 @@
 package com.tactorder.rdss.rag
 
 
-import com.tactorder.rdss.ingestion.ConfigLoader
+import com.tactorder.rdss.config.ConfigLoader
 import dev.langchain4j.model.chat.ChatLanguageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel
@@ -42,7 +42,7 @@ class RagVerticle : CoroutineVerticle() {
         val embeddingModel = OpenAiEmbeddingModel.builder()
             .baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(config.getString("llm.model", "default"))
-            .apiKey("demo")
+            .apiKey("sk-local")
             .timeout(Duration.ofSeconds(30))
             .build()
         
@@ -53,7 +53,7 @@ class RagVerticle : CoroutineVerticle() {
         chatModel = OpenAiChatModel.builder()
             .baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(config.getString("llm.model", "default"))
-            .apiKey("demo")
+            .apiKey("sk-local")
             .timeout(Duration.ofSeconds(60))
             .build()
 

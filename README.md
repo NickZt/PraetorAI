@@ -69,6 +69,27 @@ AI Models:
 
 
 
+## How to Run
+
+The RDSS uses a unified Vert.x bootstrap launcher for development.
+
+### 1. Prerequisites
+- **Java 17+**
+- **Docker** (Required for Neo4j and MongoDB)
+- **Local LLM Engine** (Currently expects an OpenAI-compatible endpoint at `http://localhost:8080/v1` such as MNN Gateway or Ollama proxy).
+
+### 2. Start Infrastructure
+Start the required databases using Docker Compose:
+```bash
+docker compose up -d
+```
+
+### 3. Launch the Application
+Run the unified launcher via Gradle. This starts the Ingestion Engine, RAG Service, and API Gateway simultaneously:
+```bash
+./gradlew :bootstrap:run
+```
+
 ## Documentation
 
 This project inherently maintains a "Memory Bank" for project status, architecture, and current goals. Refer to the `docs/` directory for detailed information:

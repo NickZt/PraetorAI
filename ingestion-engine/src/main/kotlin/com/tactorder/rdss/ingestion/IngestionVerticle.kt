@@ -7,6 +7,7 @@ import io.vertx.kotlin.coroutines.await
 import org.slf4j.LoggerFactory
 
 import com.tactorder.rdss.domain.Document
+import com.tactorder.rdss.config.ConfigLoader
 import dev.langchain4j.model.openai.OpenAiChatModel
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.dispatcher
@@ -23,7 +24,7 @@ class IngestionVerticle : CoroutineVerticle() {
         val configLoader = ConfigLoader(vertx)
         val config = configLoader.loadConfig()
         
-        logger.info("Loaded config from IngestionVerticle")
+        logger.info("Loaded config from IngestionVerticle: ${config.encodePrettily()}")
 
         // Initialize Pipeline Components
         val contentExtractor = ContentExtractor()
@@ -37,7 +38,7 @@ class IngestionVerticle : CoroutineVerticle() {
         val chatModel = OpenAiChatModel.builder()
             .baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(config.getString("llm.model", "default"))
-            .apiKey("demo")
+            .apiKey("sk-local")
             .timeout(Duration.ofSeconds(60))
             .build()
             

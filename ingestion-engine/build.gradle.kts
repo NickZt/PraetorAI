@@ -29,5 +29,4 @@ dependencies {
     // Tika & PDFBox
     implementation("org.apache.tika:tika-core:2.9.2")
     implementation("org.apache.tika:tika-parsers-standard-package:2.9.2")
-    implementation("org.apache.pdfbox:pdfbox:3.0.2")
 }

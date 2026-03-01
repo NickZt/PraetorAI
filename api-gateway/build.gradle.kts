@@ -19,5 +19,6 @@ dependencies {
     implementation(libs.vertx.core)
     implementation(libs.kotlinx.coroutines.core)
     implementation("io.vertx:vertx-lang-kotlin-coroutines:4.5.8")
+    implementation("io.vertx:vertx-web-client:4.5.8")
     implementation(libs.jackson.module.kotlin)
 }

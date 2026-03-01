@@ -1,6 +1,7 @@
 package com.tactorder.rdss
 
 import com.tactorder.rdss.api.ApiVerticle
+import com.tactorder.rdss.api.TelegramBotVerticle
 import com.tactorder.rdss.ingestion.IngestionVerticle
 import com.tactorder.rdss.rag.RagVerticle
 import io.vertx.core.AbstractVerticle
@@ -14,19 +15,11 @@ class MainLauncher : AbstractVerticle() {
     override fun start(startPromise: Promise<Void>) {
         logger.info("Starting RDSS Main Launcher...")
 
-        val steps = listOf(
-            deployHelper(IngestionVerticle()),
-            deployHelper(RagVerticle()),
-            deployHelper(ApiVerticle())
-        )
-
-        // Simple sequential deployment or use CompositeFuture
-        // For now, just fire and forget or use basic logic
-        
-        // In a real app, use CompositeFuture.all to wait for all
-        vertx.deployVerticle(IngestionVerticle())
-            .compose { vertx.deployVerticle(RagVerticle()) }
-            .compose { vertx.deployVerticle(ApiVerticle()) }
+        deployHelper(LlmManagerVerticle())
+            .compose { deployHelper(IngestionVerticle()) }
+            .compose { deployHelper(RagVerticle()) }
+            .compose { deployHelper(ApiVerticle()) }
+            .compose { deployHelper(TelegramBotVerticle()) }
             .onSuccess { 
                 logger.info("All components started successfully.")
                 startPromise.complete()

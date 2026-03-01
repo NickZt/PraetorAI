@@ -53,3 +53,4 @@ file-uploads/
 *.zip
 *.tar.gz
 *.rar
+/.env

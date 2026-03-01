@@ -1,29 +1,19 @@
 # RDSS Configuration
 
-# Neo4j Database
-neo4j:
-  uri: "bolt://localhost:7687"
-  username: "neo4j"
-  password: "password"
+neo4j.uri: "bolt://localhost:7687"
+neo4j.username: "neo4j"
+neo4j.password: "" # Loaded via .env
 
-# MongoDB
-mongodb:
-  connection-string: "mongodb://localhost:27017"
-  database: "rdss"
+mongodb.connection-string: "mongodb://localhost:27017"
+mongodb.database: "rdss"
 
-# LLM Gateway (MNNLLama)
-llm:
-  base-url: "http://localhost:8080/v1"
-  model: "default"
-  timeout: 60
+llm.base-url: "http://localhost:8080/v1"
+llm.model: "default"
+llm.timeout: 60
 
-# Ingestion
-ingestion:
-  path: "data/ingest"
-  chunk-size: 1000
-  chunk-overlap: 200
+ingestion.path: "/home/nickzt/Projects/TactOrder/RDSS/data/ingest"
+ingestion.chunk-size: 1000
+ingestion.chunk-overlap: 200
 
-# RAG
-rag:
-  vector-search-limit: 5
-  graph-traversal-depth: 2
+rag.vector-search-limit: 5
+rag.graph-traversal-depth: 2
