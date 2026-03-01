@@ -1,29 +1,55 @@
-.gradle/*
-build/*
-/data/ingest/*
-/.idea/*
-/build/
-/.gradle/
-/.kotlin/
-/api-gateway/build/
-/api-gateway/build/*
-/core-domain/build/
-/ingestion-engine/build/
-/bootstrap/build/
-/rag-service/build/
+# Gradle
+.gradle/
+build/
+*/build/
+
+# IDE files
+.idea/
 *.iml
-.gradle
-.idea
-.kotlin
+*.iws
+*.ipr
+.vscode/
+
+# Kotlin
+.kotlin/
+
+# macOS
 .DS_Store
-build
-*/build
-captures
-.externalNativeBuild
-.cxx
+
+# Data & Ingestion
+/data/
+/logs/
+/temp/
+*.log
+
+# Sensitive Files
 local.properties
-xcuserdata/
-Pods/
 *.jks
+*.p12
+*.pem
+*.key
 *.gpg
-*yarn.lock
+*.keystore
+
+# Node/Frontend (if applicable)
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+
+# Docker
+.docker/
+
+# Vert.x specific
+.vertx/
+file-uploads/
+
+# Output and Artifacts
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar

@@ -1,0 +1,29 @@
+# RDSS Configuration
+
+# Neo4j Database
+neo4j:
+  uri: "bolt://localhost:7687"
+  username: "neo4j"
+  password: "password"
+
+# MongoDB
+mongodb:
+  connection-string: "mongodb://localhost:27017"
+  database: "rdss"
+
+# LLM Gateway (MNNLLama)
+llm:
+  base-url: "http://localhost:8080/v1"
+  model: "default"
+  timeout: 60
+
+# Ingestion
+ingestion:
+  path: "data/ingest"
+  chunk-size: 1000
+  chunk-overlap: 200
+
+# RAG
+rag:
+  vector-search-limit: 5
+  graph-traversal-depth: 2

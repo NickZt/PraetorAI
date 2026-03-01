@@ -39,10 +39,10 @@ weaviate:
   scheme: http
   api-key: ""
 
-# Ollama Configuration
-ollama:
-  base-url: http://localhost:11434
-  model: llama3.1:8b
+# LLM Configuration (MNNLLama)
+llm:
+  base-url: http://localhost:8080/v1
+  model: default
   timeout: 60s
   max-retries: 3
 

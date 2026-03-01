@@ -22,7 +22,7 @@ neo4j-driver = { module = "org.neo4j.driver:neo4j-java-driver", version.ref = "n
 mongodb-driver = { module = "org.mongodb:mongodb-driver-reactivestreams", version.ref = "mongodb" }
 
 langchain4j-core = { module = "dev.langchain4j:langchain4j", version.ref = "langchain4j" }
-langchain4j-ollama = { module = "dev.langchain4j:langchain4j-ollama", version.ref = "langchain4j" }
+langchain4j-open-ai = { module = "dev.langchain4j:langchain4j-open-ai", version.ref = "langchain4j" }
 langchain4j-neo4j = { module = "dev.langchain4j:langchain4j-neo4j-vector", version.ref = "langchain4j" }
 
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }

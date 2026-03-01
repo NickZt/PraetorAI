@@ -2,7 +2,7 @@ package com.tactorder.rdss.config
 
 import dev.langchain4j.model.chat.ChatLanguageModel
 import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.model.ollama.OllamaChatModel
+import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -12,21 +12,22 @@ import java.time.Duration
 @Configuration
 class LangChainConfig {
 
-    @Value("\${ollama.base-url}")
-    private lateinit var ollamaBaseUrl: String
+    @Value("\${llm.base-url}")
+    private lateinit var llmBaseUrl: String
 
-    @Value("\${ollama.model}")
-    private lateinit var ollamaModelName: String
+    @Value("\${llm.model}")
+    private lateinit var llmModelName: String
 
-    @Value("\${ollama.timeout}")
-    private lateinit var ollamaTimeout: Duration
+    @Value("\${llm.timeout}")
+    private lateinit var llmTimeout: Duration
 
     @Bean
     fun chatLanguageModel(): ChatLanguageModel {
-        return OllamaChatModel.builder()
-            .baseUrl(ollamaBaseUrl)
-            .modelName(ollamaModelName)
-            .timeout(ollamaTimeout)
+        return OpenAiChatModel.builder()
+            .baseUrl(llmBaseUrl)
+            .modelName(llmModelName)
+            .apiKey("demo") // Dummy API key usually required by OpenAI client
+            .timeout(llmTimeout)
             .build()
     }
 

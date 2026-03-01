@@ -69,5 +69,13 @@ AI Models:
 
 
 
+## Documentation
 
+This project inherently maintains a "Memory Bank" for project status, architecture, and current goals. Refer to the `docs/` directory for detailed information:
+- [Project Brief](docs/projectbrief.md)
+- [Product Context](docs/productContext.md)
+- [Active Context](docs/activeContext.md)
+- [System Patterns](docs/systemPatterns.md)
+- [Technical Context](docs/techContext.md)
+- [Progress Tracking](docs/progress.md)
 

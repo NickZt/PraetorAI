@@ -2,8 +2,14 @@ plugins {
     application
 }
 
+val mainVerticleName = "com.tactorder.rdss.api.ApiVerticle"
+
 application {
     mainClass.set("io.vertx.core.Launcher")
+}
+
+tasks.named<JavaExec>("run") {
+    args("run", mainVerticleName)
 }
 
 dependencies {
