@@ -10,8 +10,8 @@ spring:
     neo4j:
       uri: bolt://localhost:7687
       authentication:
-        username: neo4j
-        password: password
+        username: ${NEO4J_USERNAME:neo4j}
+        password: ${NEO4J_PASSWORD:password}
       database: rdss
   
   # MongoDB Configuration
@@ -43,6 +43,7 @@ weaviate:
 llm:
   base-url: http://localhost:8080/v1
   model: default
+  api-key: ${LLM_API_KEY:demo}
   timeout: 60s
   max-retries: 3
 

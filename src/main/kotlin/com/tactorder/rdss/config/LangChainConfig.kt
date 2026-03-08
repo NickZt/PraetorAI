@@ -21,12 +21,15 @@ class LangChainConfig {
     @Value("\${llm.timeout}")
     private lateinit var llmTimeout: Duration
 
+    @Value("\${llm.api-key:demo}")
+    private lateinit var llmApiKey: String
+
     @Bean
     fun chatLanguageModel(): ChatLanguageModel {
         return OpenAiChatModel.builder()
             .baseUrl(llmBaseUrl)
             .modelName(llmModelName)
-            .apiKey("demo") // Dummy API key usually required by OpenAI client
+            .apiKey(llmApiKey) // API key loaded from config
             .timeout(llmTimeout)
             .build()
     }

@@ -33,7 +33,7 @@ class RagVerticle : CoroutineVerticle() {
         // Neo4j Driver
         val uri = appConfig.getString("neo4j.uri", "bolt://localhost:7687")
         val user = appConfig.getString("neo4j.username", "neo4j")
-        val password = appConfig.getString("neo4j.password", "password")
+        val password = appConfig.getString("neo4j.password", System.getenv("NEO4J_PASSWORD") ?: "password")
         neo4jDriver = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
 
         graphRetriever = GraphRetriever(neo4jDriver)
@@ -61,10 +61,11 @@ class RagVerticle : CoroutineVerticle() {
 
     private fun executeRagPipeline(query: String, date: LocalDate?): String {
         // Init LLM context lazily to avoid race conditions with LLM Gateway startup
+        val apiKey = appConfig.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local")
         val embeddingModel = OpenAiEmbeddingModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(appConfig.getString("llm.embedding.model", "native-Qwen3-Embedding-0.6B-MNN"))
-            .apiKey("sk-local")
+            .apiKey(apiKey)
             .timeout(Duration.ofSeconds(30))
             .build()
 
@@ -73,7 +74,7 @@ class RagVerticle : CoroutineVerticle() {
         val chatModel = OpenAiChatModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(appConfig.getString("llm.chat.model", "native-qwen2.5-7b"))
-            .apiKey("sk-local")
+            .apiKey(apiKey)
             .timeout(Duration.ofSeconds(60))
             .build()
 

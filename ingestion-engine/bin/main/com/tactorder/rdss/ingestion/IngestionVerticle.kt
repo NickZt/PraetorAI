@@ -33,7 +33,8 @@ class IngestionVerticle : CoroutineVerticle() {
 
         // Setup Chat Model for LLMExtractor
         val chatModel = OpenAiChatModel.builder().baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(config.getString("llm.chat.model", "native-qwen2.5-7b")).apiKey("sk-local")
+            .modelName(config.getString("llm.chat.model", "native-qwen2.5-7b"))
+            .apiKey(config.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local"))
             .timeout(Duration.ofSeconds(60)).build()
 
         val llmExtractor = LLMExtractor(chatModel)

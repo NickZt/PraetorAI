@@ -8,7 +8,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     environment:
-      NEO4J_AUTH: neo4j/password
+      NEO4J_AUTH: ${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-password}
       NEO4J_PLUGINS: '["apoc"]'
       NEO4J_apoc_export_file_enabled: "true"
       NEO4J_apoc_import_file_enabled: "true"
@@ -29,7 +29,6 @@ services:
     volumes:
       - ./data/mongo/db:/data/db
       - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-
   # redis:
   #   image: redis:7.2
   #   container_name: rdss-redis
@@ -38,12 +37,12 @@ services:
   #   volumes:
   #     - ./data/redis:/data
 
-# Ollama is expected to run on the host machine for GPU access.
-# If running in container is required, uncomment below (CPU only by default unless --gpus passed)
-#  ollama:
-#    image: ollama/ollama:latest
-#    container_name: rdss-ollama
-#    ports:
-#      - "11434:11434"
-#    volumes:
-#      - ./data/ollama:/root/.ollama
+  # Ollama is expected to run on the host machine for GPU access.
+  # If running in container is required, uncomment below (CPU only by default unless --gpus passed)
+  #  ollama:
+  #    image: ollama/ollama:latest
+  #    container_name: rdss-ollama
+  #    ports:
+  #      - "11434:11434"
+  #    volumes:
+  #      - ./data/ollama:/root/.ollama
