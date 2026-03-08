@@ -64,17 +64,17 @@ class CitationExtractorTest {
         val citations = extractor.extract(text)
 
         assertEquals(2, citations.size)
-        
+
         val numeric = citations.find { it.type == CitationType.NUMERIC }
         val authorYear = citations.find { it.type == CitationType.AUTHOR_YEAR }
 
         assertTrue(numeric != null)
         assertTrue(authorYear != null)
-        
+
         assertEquals("[1]", numeric?.rawText)
         assertEquals("(Jones, 2022)", authorYear?.rawText)
     }
-    
+
     @Test
     fun `should return empty list for no citations`() {
         val text = "This is a statement with no citations."

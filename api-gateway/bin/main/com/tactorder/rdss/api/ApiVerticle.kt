@@ -15,23 +15,24 @@ class ApiVerticle : CoroutineVerticle() {
 
     override suspend fun start() {
         logger.info("Starting ApiVerticle...")
-        
+
         val router = Router.router(vertx)
         router.route().handler(BodyHandler.create())
-        
+
         // CORS Support
-        router.route().handler(io.vertx.ext.web.handler.CorsHandler.create()
-            .addOrigin("*")
-            .allowedMethod(io.vertx.core.http.HttpMethod.GET)
-            .allowedMethod(io.vertx.core.http.HttpMethod.POST)
-            .allowedHeader("Content-Type")
+        router.route().handler(
+            io.vertx.ext.web.handler.CorsHandler.create()
+                .addOrigin("*")
+                .allowedMethod(io.vertx.core.http.HttpMethod.GET)
+                .allowedMethod(io.vertx.core.http.HttpMethod.POST)
+                .allowedHeader("Content-Type")
         )
-        
+
         // Ingestion Endpoint
         router.post("/ingest").handler { ctx ->
             val body = ctx.body().asJsonObject()
             val filePath = body.getString("path")
-            
+
             if (filePath.isNullOrBlank()) {
                 ctx.response().setStatusCode(400).end("Missing 'path' in body")
                 return@handler
@@ -41,17 +42,17 @@ class ApiVerticle : CoroutineVerticle() {
             vertx.eventBus().publish("ingestion.new_file", filePath)
             ctx.response().end(JsonObject().put("status", "Ingestion started for $filePath").encode())
         }
-        
+
         // RAG Query Endpoint
         router.post("/query").handler { ctx ->
             val body = ctx.body().asJsonObject()
             val query = body.getString("query")
-            
+
             if (query.isNullOrBlank()) {
                 ctx.response().setStatusCode(400).end("Missing 'query' in body")
                 return@handler
             }
-            
+
             // Request-Reply to RAG Service
             launch(vertx.dispatcher()) {
                 try {
@@ -68,13 +69,13 @@ class ApiVerticle : CoroutineVerticle() {
                 }
             }
         }
-        
+
         // Graph Visualization Endpoint (Stub for now)
         router.get("/graph/visualize").handler { ctx ->
-             // TODO: Fetch graph data from Neo4j directly or via service
-             ctx.response().end(JsonObject().put("nodes", listOf<Any>()).put("edges", listOf<Any>()).encode())
+            // TODO: Fetch graph data from Neo4j directly or via service
+            ctx.response().end(JsonObject().put("nodes", listOf<Any>()).put("edges", listOf<Any>()).encode())
         }
-        
+
         vertx.createHttpServer()
             .requestHandler(router)
             .listen(8081)

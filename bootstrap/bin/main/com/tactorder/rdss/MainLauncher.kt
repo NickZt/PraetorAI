@@ -20,11 +20,11 @@ class MainLauncher : AbstractVerticle() {
             .compose { deployHelper(RagVerticle()) }
             .compose { deployHelper(ApiVerticle()) }
             .compose { deployHelper(TelegramBotVerticle()) }
-            .onSuccess { 
+            .onSuccess {
                 logger.info("All components started successfully.")
                 startPromise.complete()
             }
-            .onFailure { 
+            .onFailure {
                 logger.error("Failed to start components", it)
                 startPromise.fail(it)
             }

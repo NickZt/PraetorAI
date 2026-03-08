@@ -20,10 +20,10 @@ subprojects {
         add("implementation", "io.vertx:vertx-core")
         add("implementation", "io.vertx:vertx-lang-kotlin")
         add("implementation", "io.vertx:vertx-lang-kotlin-coroutines")
-        
+
         add("implementation", "io.github.microutils:kotlin-logging-jvm:3.0.5")
         add("implementation", "ch.qos.logback:logback-classic:1.4.14")
-        
+
         add("testImplementation", "io.vertx:vertx-junit5")
         add("testImplementation", "org.junit.jupiter:junit-jupiter:5.10.1")
         add("testImplementation", "io.mockk:mockk:1.13.10")

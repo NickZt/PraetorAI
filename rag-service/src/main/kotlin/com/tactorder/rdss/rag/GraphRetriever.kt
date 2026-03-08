@@ -24,51 +24,51 @@ class GraphRetriever(private val driver: Driver) {
         """
 
         return driver.session().use { session ->
-             val result = session.run(cypher, mapOf("ids" to nodeIds))
-             if (result.hasNext()) {
-                 val record = result.next()
-                 val nodes = record.get("nodes").asList { node -> 
-                     val n = node as org.neo4j.driver.types.Node
-                     JsonObject()
+            val result = session.run(cypher, mapOf("ids" to nodeIds))
+            if (result.hasNext()) {
+                val record = result.next()
+                val nodes = record.get("nodes").asList { node ->
+                    val n = node as org.neo4j.driver.types.Node
+                    JsonObject()
                         .put("id", n.elementId())
                         .put("labels", JsonArray(n.labels().toList()))
                         .put("props", JsonObject(n.asMap()))
-                 }
-                 val rels = record.get("relationships").asList { rel ->
-                     val r = rel as org.neo4j.driver.types.Relationship
-                     JsonObject()
+                }
+                val rels = record.get("relationships").asList { rel ->
+                    val r = rel as org.neo4j.driver.types.Relationship
+                    JsonObject()
                         .put("type", r.type())
                         .put("start", r.startNodeElementId())
                         .put("end", r.endNodeElementId())
                         .put("props", JsonObject(r.asMap()))
-                 }
-                 
-                 // Combine into a generic result structure 
-                 // or just return the subgraph list
-                 nodes + rels
-             } else {
-                 emptyList()
-             }
+                }
+
+                // Combine into a generic result structure
+                // or just return the subgraph list
+                nodes + rels
+            } else {
+                emptyList()
+            }
         }
     }
-    
+
     // Placeholder for temporal filtering logic
     fun temporalFilter(graphData: List<JsonObject>, queryDate: LocalDate?): List<JsonObject> {
         if (queryDate == null) return graphData
-        
+
         // Filter logic: Check 'validFrom' / 'validTo' properties on Law nodes
         // For relationships like AMENDS, check 'date'
-        
+
         return graphData.filter { item ->
             val props = item.getJsonObject("props") ?: return@filter true
-            
+
             // Check validFrom/validTo
             val validFrom = props.getString("validFrom")?.let { LocalDate.parse(it) }
             val validTo = props.getString("validTo")?.let { LocalDate.parse(it) }
-            
+
             if (validFrom != null && queryDate.isBefore(validFrom)) return@filter false
             if (validTo != null && queryDate.isAfter(validTo)) return@filter false
-            
+
             true
         }
     }

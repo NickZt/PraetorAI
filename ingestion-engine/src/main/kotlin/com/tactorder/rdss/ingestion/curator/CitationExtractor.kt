@@ -9,6 +9,7 @@ package com.tactorder.rdss.ingestion.curator
 class CitationExtractor {
 
     private val numericPattern = Regex("\\[\\d+(?:,\\s*\\d+)*\\]")
+
     // Matches (Author, Year) or (Author et al., Year)
     // Detailed breakdown:
     // \\( : Start with (
@@ -24,20 +25,24 @@ class CitationExtractor {
 
         // Extract numeric citations
         numericPattern.findAll(text).forEach { matchResult ->
-            citations.add(Citation(
-                rawText = matchResult.value,
-                type = CitationType.NUMERIC,
-                metadata = parseNumericMetadata(matchResult.value)
-            ))
+            citations.add(
+                Citation(
+                    rawText = matchResult.value,
+                    type = CitationType.NUMERIC,
+                    metadata = parseNumericMetadata(matchResult.value)
+                )
+            )
         }
 
         // Extract author-year citations
         authorYearPattern.findAll(text).forEach { matchResult ->
-            citations.add(Citation(
-                rawText = matchResult.value,
-                type = CitationType.AUTHOR_YEAR,
-                metadata = parseAuthorYearMetadata(matchResult.value)
-            ))
+            citations.add(
+                Citation(
+                    rawText = matchResult.value,
+                    type = CitationType.AUTHOR_YEAR,
+                    metadata = parseAuthorYearMetadata(matchResult.value)
+                )
+            )
         }
 
         return citations

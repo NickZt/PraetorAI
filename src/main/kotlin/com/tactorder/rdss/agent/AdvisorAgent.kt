@@ -17,9 +17,9 @@ class AdvisorAgent(
     private val experimentRepository: ExperimentRepository,
     private val sourceDocumentRepository: SourceDocumentRepository
 ) {
-    
+
     private val logger = KotlinLogging.logger {}
-    
+
     data class MaturityAssessment(
         val conceptId: String,
         val conceptName: String,
@@ -28,13 +28,13 @@ class AdvisorAgent(
         val factors: List<MaturityFactor>,
         val recommendation: String
     )
-    
+
     data class MaturityFactor(
         val factor: String,
         val score: Double,
         val description: String
     )
-    
+
     data class ResearchRecommendation(
         val type: RecommendationType,
         val title: String,
@@ -44,39 +44,39 @@ class AdvisorAgent(
         val relatedConcepts: List<String>,
         val reasoning: String
     )
-    
+
     enum class RecommendationType {
         EXPERIMENT, VALIDATION, PUBLICATION, COLLABORATION, FURTHER_RESEARCH
     }
-    
+
     enum class Priority {
         HIGH, MEDIUM, LOW
     }
-    
+
     data class ResearchRoadmap(
         val title: String,
         val timeframe: String,
         val phases: List<RoadmapPhase>
     )
-    
+
     data class RoadmapPhase(
         val name: String,
         val duration: String,
         val objectives: List<String>,
         val deliverables: List<String>
     )
-    
+
     /**
      * Analyze concept maturity and provide scoring
      */
     fun analyzeConceptMaturity(conceptId: String): MaturityAssessment {
         logger.info { "Analyzing maturity for concept: $conceptId" }
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         val factors = calculateMaturityFactors(concept)
         val maturityScore = calculateOverallMaturityScore(factors)
         val recommendation = generateMaturityRecommendation(concept, maturityScore, factors)
-        
+
         return MaturityAssessment(
             conceptId = concept.id,
             conceptName = concept.name,
@@ -86,10 +86,10 @@ class AdvisorAgent(
             recommendation = recommendation
         )
     }
-    
+
     private fun calculateMaturityFactors(concept: Concept): List<MaturityFactor> {
         val factors = mutableListOf<MaturityFactor>()
-        
+
         // Factor 1: Validation by experiments
         val validatingExperiments = experimentRepository.findByValidatedConcept(concept.id)
         val validationScore = calculateValidationScore(validatingExperiments)
@@ -100,7 +100,7 @@ class AdvisorAgent(
                 description = "Based on ${validatingExperiments.size} validating experiments"
             )
         )
-        
+
         // Factor 2: Concept age and evolution
         val ageScore = calculateAgeScore(concept)
         factors.add(
@@ -110,7 +110,7 @@ class AdvisorAgent(
                 description = "Based on concept age and version history"
             )
         )
-        
+
         // Factor 3: Citation and inspiration
         val inspirationScore = calculateInspirationScore(concept)
         factors.add(
@@ -120,7 +120,7 @@ class AdvisorAgent(
                 description = "Based on citations and academic inspiration"
             )
         )
-        
+
         // Factor 4: Relationship complexity
         val relationshipScore = calculateRelationshipScore(concept)
         factors.add(
@@ -130,50 +130,50 @@ class AdvisorAgent(
                 description = "Based on connections to other concepts"
             )
         )
-        
+
         return factors
     }
-    
+
     private fun calculateValidationScore(experiments: List<Experiment>): Double {
         if (experiments.isEmpty()) return 0.0
-        
+
         val completedExperiments = experiments.count { it.status == ExperimentStatus.COMPLETED }
-        val successfulExperiments = experiments.count { 
-            it.status == ExperimentStatus.COMPLETED && 
-            it.conclusion?.lowercase()?.contains("success") == true
+        val successfulExperiments = experiments.count {
+            it.status == ExperimentStatus.COMPLETED &&
+                    it.conclusion?.lowercase()?.contains("success") == true
         }
-        
+
         return when {
             completedExperiments == 0 -> 0.0
             successfulExperiments == completedExperiments -> 1.0
             else -> (successfulExperiments.toDouble() / completedExperiments) * 0.8 + 0.2
         }
     }
-    
+
     private fun calculateAgeScore(concept: Concept): Double {
         val daysSinceCreation = ChronoUnit.DAYS.between(concept.firstMentioned, LocalDateTime.now())
         val daysSinceUpdate = ChronoUnit.DAYS.between(concept.lastUpdated, LocalDateTime.now())
-        
+
         val ageScore = minOf(daysSinceCreation / 365.0, 1.0) // Max 1 point for age
         val activityScore = if (daysSinceUpdate < 30) 1.0 else if (daysSinceUpdate < 90) 0.7 else 0.3
-        
+
         return (ageScore + activityScore) / 2.0
     }
-    
+
     private fun calculateInspirationScore(concept: Concept): Double {
         val inspirationCount = concept.inspiredBy.size
         return minOf(inspirationCount / 5.0, 1.0) // Max 1 point for 5+ inspirations
     }
-    
+
     private fun calculateRelationshipScore(concept: Concept): Double {
         val relationshipCount = concept.buildsOn.size + concept.contradicts.size
         return minOf(relationshipCount / 3.0, 1.0) // Max 1 point for 3+ relationships
     }
-    
+
     private fun calculateOverallMaturityScore(factors: List<MaturityFactor>): Double {
         return factors.map { it.score }.average()
     }
-    
+
     private fun generateMaturityRecommendation(
         concept: Concept,
         maturityScore: Double,
@@ -186,17 +186,17 @@ class AdvisorAgent(
             else -> "Concept is in early stages, requires significant further research"
         }
     }
-    
+
     /**
      * Generate research recommendations based on concept analysis
      */
     suspend fun generateRecommendations(conceptId: String, limit: Int = 10): List<ResearchRecommendation> {
         logger.info { "Generating recommendations for concept: $conceptId" }
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         val maturity = analyzeConceptMaturity(conceptId)
         val recommendations = mutableListOf<ResearchRecommendation>()
-        
+
         // Experiment recommendations
         if (maturity.maturityScore < 0.7) {
             recommendations.add(
@@ -211,7 +211,7 @@ class AdvisorAgent(
                 )
             )
         }
-        
+
         // Publication recommendations
         if (maturity.maturityScore >= 0.7) {
             recommendations.add(
@@ -226,7 +226,7 @@ class AdvisorAgent(
                 )
             )
         }
-        
+
         // Collaboration recommendations
         val relatedConcepts = conceptRepository.findRelatedConcepts(conceptId)
         if (relatedConcepts.isNotEmpty()) {
@@ -234,7 +234,9 @@ class AdvisorAgent(
                 ResearchRecommendation(
                     type = RecommendationType.COLLABORATION,
                     title = "Collaborate with researchers working on related concepts",
-                    description = "Explore synergies with concepts: ${relatedConcepts.take(3).joinToString(", ") { it.name }}",
+                    description = "Explore synergies with concepts: ${
+                        relatedConcepts.take(3).joinToString(", ") { it.name }
+                    }",
                     priority = Priority.MEDIUM,
                     estimatedEffort = "1-2 weeks",
                     relatedConcepts = relatedConcepts.map { it.id },
@@ -242,25 +244,25 @@ class AdvisorAgent(
                 )
             )
         }
-        
+
         // Use LLM to generate additional recommendations
         val llmRecommendations = generateLLMRecommendations(concept, maturity)
         recommendations.addAll(llmRecommendations)
-        
+
         return recommendations.sortedByDescending { it.priority.ordinal }
             .take(limit)
     }
-    
+
     private suspend fun generateLLMRecommendations(
         concept: Concept,
         maturity: MaturityAssessment
     ): List<ResearchRecommendation> {
         val prompt = buildRecommendationPrompt(concept, maturity)
         val response = chatModel.generate(prompt)
-        
+
         return parseRecommendationResponse(response.content().text(), concept.id)
     }
-    
+
     private fun buildRecommendationPrompt(concept: Concept, maturity: MaturityAssessment): String {
         return """
             You are an expert research advisor specializing in computer science and military AI research.
@@ -297,7 +299,7 @@ class AdvisorAgent(
             ```
         """.trimIndent()
     }
-    
+
     private fun parseRecommendationResponse(response: String, conceptId: String): List<ResearchRecommendation> {
         return try {
             // Extract JSON from response
@@ -305,7 +307,7 @@ class AdvisorAgent(
                 .find(response)
                 ?.groupValues?.get(1)
                 ?: response.trim()
-            
+
             // Parse recommendations (simplified - would need proper JSON parsing)
             emptyList<ResearchRecommendation>() // Placeholder
         } catch (e: Exception) {
@@ -313,23 +315,23 @@ class AdvisorAgent(
             emptyList()
         }
     }
-    
+
     /**
      * Generate a research roadmap
      */
     suspend fun generateResearchRoadmap(conceptId: String): ResearchRoadmap {
         logger.info { "Generating research roadmap for concept: $conceptId" }
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         val maturity = analyzeConceptMaturity(conceptId)
         val recommendations = generateRecommendations(conceptId)
-        
+
         val prompt = buildRoadmapPrompt(concept, maturity, recommendations)
         val response = chatModel.generate(prompt)
-        
+
         return parseRoadmapResponse(response.content().text(), concept.name)
     }
-    
+
     private fun buildRoadmapPrompt(
         concept: Concept,
         maturity: MaturityAssessment,
@@ -366,7 +368,7 @@ class AdvisorAgent(
             ```
         """.trimIndent()
     }
-    
+
     private fun parseRoadmapResponse(response: String, conceptName: String): ResearchRoadmap {
         return try {
             // Extract JSON from response
@@ -374,7 +376,7 @@ class AdvisorAgent(
                 .find(response)
                 ?.groupValues?.get(1)
                 ?: response.trim()
-            
+
             // Parse roadmap (simplified - would need proper JSON parsing)
             ResearchRoadmap(
                 title = "Research Roadmap for $conceptName",
@@ -390,32 +392,32 @@ class AdvisorAgent(
             )
         }
     }
-    
+
     /**
      * Identify publication opportunities
      */
     fun identifyPublicationOpportunities(conceptId: String): List<String> {
         logger.info { "Identifying publication opportunities for concept: $conceptId" }
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         val opportunities = mutableListOf<String>()
-        
+
         // Based on concept tags and research areas
         if (concept.tags.contains("fog-computing")) {
             opportunities.add("IEEE Transactions on Fog Computing")
             opportunities.add("ACM MobiCom (Mobile Computing and Networking)")
         }
-        
+
         if (concept.tags.contains("military-ai")) {
             opportunities.add("Military Operations Research")
             opportunities.add("IEEE Transactions on Systems, Man, and Cybernetics")
         }
-        
+
         if (concept.tags.contains("ml-inference")) {
             opportunities.add("NeurIPS (Neural Information Processing Systems)")
             opportunities.add("ICML (International Conference on Machine Learning)")
         }
-        
+
         return opportunities.distinct()
     }
 }

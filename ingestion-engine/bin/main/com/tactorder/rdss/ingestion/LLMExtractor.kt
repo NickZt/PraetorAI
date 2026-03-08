@@ -1,20 +1,17 @@
 package com.tactorder.rdss.ingestion
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.tactorder.rdss.domain.*
 import dev.langchain4j.model.chat.ChatLanguageModel
 import dev.langchain4j.service.AiServices
 import dev.langchain4j.service.UserMessage
 import dev.langchain4j.service.V
-
-import com.tactorder.rdss.domain.Concept
-import com.tactorder.rdss.domain.Document
-import com.tactorder.rdss.domain.Law
-import com.tactorder.rdss.domain.Section
-import com.tactorder.rdss.domain.Person
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 
 interface ExtractionService {
-    @UserMessage("""
+    @UserMessage(
+        """
         Analyze the following legal/military text and extract key entities and relationships.
         Return a JSON object with the following structure:
         {
@@ -25,7 +22,8 @@ interface ExtractionService {
         }
         
         Text: {{text}}
-    """)
+    """
+    )
     fun extractEntities(@V("text") text: String): String
 }
 
@@ -40,7 +38,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
         val json = service.extractEntities(text)
         return ExtractedEntities(rawJson = json)
     }
-    
+
     fun mapToDomainEntities(extracted: ExtractedEntities, parentDocument: Document): List<Any> {
         val entities = mutableListOf<Any>()
         try {
@@ -49,9 +47,9 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
             if (rawJson.startsWith("```json")) {
                 rawJson = rawJson.removePrefix("```json").removeSuffix("```").trim()
             }
-            
+
             val rootNode = mapper.readTree(rawJson)
-            
+
             // 1. Concepts
             if (rootNode.has("concepts")) {
                 rootNode.get("concepts").forEach { conceptNode ->
@@ -62,7 +60,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                     entities.add(concept)
                 }
             }
-            
+
             // 2. Laws
             if (rootNode.has("laws")) {
                 rootNode.get("laws").forEach { lawNode ->
@@ -75,7 +73,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                     entities.add(law)
                 }
             }
-            
+
             // 3. Sections
             if (rootNode.has("sections")) {
                 rootNode.get("sections").forEach { secNode ->
@@ -86,7 +84,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                     entities.add(sec)
                 }
             }
-            
+
             // 4. People
             if (rootNode.has("people")) {
                 rootNode.get("people").forEach { pNode ->
@@ -97,11 +95,11 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                     entities.add(person)
                 }
             }
-            
+
         } catch (e: Exception) {
             logger.error("Failed to parse LLM JSON: ${extracted.rawJson}", e)
         }
-        
+
         return entities
     }
 }

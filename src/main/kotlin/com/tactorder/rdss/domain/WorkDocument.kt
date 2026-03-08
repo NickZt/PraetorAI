@@ -10,25 +10,25 @@ import java.time.LocalDate
 data class WorkDocument(
     @Id
     val id: String,
-    
+
     @Property
     val title: String,
-    
+
     @Property
     val type: WorkDocumentType,
-    
+
     @Property
     val status: WorkDocumentStatus,
-    
+
     @Property
     val filePath: String,
-    
+
     @Property
     val deadline: LocalDate?,
-    
+
     @Relationship(type = "APPLIES", direction = Relationship.Direction.OUTGOING)
     val appliedConcepts: List<Concept> = emptyList(),
-    
+
     @Relationship(type = "CITES", direction = Relationship.Direction.OUTGOING)
     val citations: List<SourceDocument> = emptyList()
 )

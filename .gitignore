@@ -18,6 +18,7 @@ build/
 
 # Data & Ingestion
 /data/
+/docs/
 /logs/
 /temp/
 *.log

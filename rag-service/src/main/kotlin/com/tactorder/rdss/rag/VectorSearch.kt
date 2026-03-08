@@ -1,13 +1,9 @@
 package com.tactorder.rdss.rag
 
-import io.vertx.core.json.Json
-import io.vertx.core.json.JsonArray
+import dev.langchain4j.model.embedding.EmbeddingModel
 import io.vertx.core.json.JsonObject
 import org.neo4j.driver.Driver
-import org.neo4j.driver.Values
 import org.slf4j.LoggerFactory
-import dev.langchain4j.model.embedding.EmbeddingModel
-import dev.langchain4j.data.segment.TextSegment
 
 class VectorSearch(
     private val driver: Driver,
@@ -32,7 +28,7 @@ class VectorSearch(
              `vector.similarity_function`: 'cosine'
             }}
         """
-        
+
         try {
             driver.session().use { session ->
                 session.run(query)
@@ -46,13 +42,13 @@ class VectorSearch(
     fun search(query: String, limit: Int = 5): List<JsonObject> {
         val embedding = embeddingModel.embed(query).content()
         val vectorList = embedding.vector().toList()
-        
+
         val cypher = """
             CALL db.index.vector.queryNodes($indexName, $limit, $vectorList)
             YIELD node, score
             RETURN node.id AS id, node.title AS title, node.rawText AS text, score
         """
-        
+
         return driver.session().use { session ->
             session.run(cypher).list().map { record ->
                 JsonObject()

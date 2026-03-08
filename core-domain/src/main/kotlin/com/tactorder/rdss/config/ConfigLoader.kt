@@ -43,7 +43,7 @@ class ConfigLoader(private val vertx: Vertx) {
 
         // 3. Merge .env Variables directly into Vert.x JsonObject (highest priority)
         val finalConfig = baseConfig.copy()
-        
+
         dotenv?.entries()?.forEach { entry ->
             val key = entry.key.lowercase().replace("_", ".")
             finalConfig.put(key, entry.value)

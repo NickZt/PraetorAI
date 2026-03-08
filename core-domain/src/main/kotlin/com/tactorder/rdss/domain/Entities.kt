@@ -28,7 +28,7 @@ data class Law(
 
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
-    
+
     @Relationship(type = "CONTAINS")
     var sections: MutableSet<Section> = mutableSetOf()
 }

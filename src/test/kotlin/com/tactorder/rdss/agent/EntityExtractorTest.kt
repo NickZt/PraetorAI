@@ -10,16 +10,16 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 
 class EntityExtractorTest {
-    
+
     private lateinit var mockChatModel: ChatLanguageModel
     private lateinit var entityExtractor: EntityExtractor
-    
+
     @BeforeEach
     fun setUp() {
         mockChatModel = mockk()
         entityExtractor = EntityExtractor(mockChatModel)
     }
-    
+
     @Test
     fun `should extract concepts from research text`() {
         val text = """
@@ -27,9 +27,10 @@ class EntityExtractorTest {
             This approach reduces latency and bandwidth usage compared to traditional cloud computing architectures.
             Machine learning models deployed on fog nodes can provide real-time inference capabilities for edge devices.
         """.trimIndent()
-        
+
         val mockResponse = Response<AiMessage>(
-            AiMessage("""
+            AiMessage(
+                """
                 ```json
                 {
                   "concepts": [
@@ -65,24 +66,25 @@ class EntityExtractorTest {
                   ]
                 }
                 ```
-            """)
+            """
+            )
         )
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         val entities = entityExtractor.extractEntities(text)
-        
+
         assertEquals(2, entities.concepts.size)
         assertEquals("Fog Computing", entities.concepts[0].name)
         assertEquals(0.9, entities.concepts[0].confidence, 0.01)
-        
+
         assertEquals(1, entities.methods.size)
         assertEquals("Distributed Computing", entities.methods[0].name)
-        
+
         assertEquals(1, entities.researchAreas.size)
         assertEquals("Edge Computing", entities.researchAreas[0].name)
     }
-    
+
     @Test
     fun `should extract methods from technical text`() {
         val text = """
@@ -90,9 +92,10 @@ class EntityExtractorTest {
             Knowledge distillation was used to transfer knowledge from a large teacher model to a smaller student model.
             Pruning removed unnecessary connections from the neural network.
         """.trimIndent()
-        
+
         val mockResponse = Response<AiMessage>(
-            AiMessage("""
+            AiMessage(
+                """
                 ```json
                 {
                   "concepts": [],
@@ -120,23 +123,24 @@ class EntityExtractorTest {
                   "researchAreas": []
                 }
                 ```
-            """)
+            """
+            )
         )
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         val methods = entityExtractor.extractMethods(text)
-        
+
         assertEquals(3, methods.size)
         assertTrue(methods.any { it.name == "Quantization" })
         assertTrue(methods.any { it.name == "Knowledge Distillation" })
         assertTrue(methods.any { it.name == "Pruning" })
-        
+
         methods.forEach { method ->
             assertTrue(method.confidence >= 0.7)
         }
     }
-    
+
     @Test
     fun `should extract research areas from academic text`() {
         val text = """
@@ -144,9 +148,10 @@ class EntityExtractorTest {
             The work spans both fog computing and edge computing domains, with applications in distributed systems.
             Machine learning techniques are applied to solve real-time processing challenges in battlefield environments.
         """.trimIndent()
-        
+
         val mockResponse = Response<AiMessage>(
-            AiMessage("""
+            AiMessage(
+                """
                 ```json
                 {
                   "concepts": [],
@@ -174,23 +179,24 @@ class EntityExtractorTest {
                   ]
                 }
                 ```
-            """)
+            """
+            )
         )
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         val researchAreas = entityExtractor.extractResearchAreas(text)
-        
+
         assertEquals(3, researchAreas.size)
         assertTrue(researchAreas.any { it.name == "Military AI" })
         assertTrue(researchAreas.any { it.name == "Fog Computing" })
         assertTrue(researchAreas.any { it.name == "Edge Computing" })
-        
+
         researchAreas.forEach { area ->
             assertTrue(area.confidence >= 0.6)
         }
     }
-    
+
     @Test
     fun `should validate and filter entities`() {
         val entities = EntityExtractor.ExtractedEntities(
@@ -207,36 +213,37 @@ class EntityExtractorTest {
             datasets = emptyList(),
             researchAreas = emptyList()
         )
-        
+
         val validated = entityExtractor.validateEntities(entities)
-        
+
         assertEquals(1, validated.concepts.size)
         assertEquals("Valid Concept", validated.concepts[0].name)
-        
+
         assertEquals(1, validated.methods.size)
         assertEquals("Valid Method", validated.methods[0].name)
     }
-    
+
     @Test
     fun `should handle malformed JSON response gracefully`() {
         val text = "Some research text about machine learning and edge computing."
-        
+
         val mockResponse = Response<AiMessage>(AiMessage("Invalid JSON response"))
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         val entities = entityExtractor.extractEntities(text)
-        
+
         assertTrue(entities.concepts.isEmpty())
         assertTrue(entities.methods.isEmpty())
         assertTrue(entities.datasets.isEmpty())
         assertTrue(entities.researchAreas.isEmpty())
     }
-    
+
     @Test
     fun `should handle empty text`() {
         val mockResponse = Response<AiMessage>(
-            AiMessage("""
+            AiMessage(
+                """
                 ```json
                 {
                   "concepts": [],
@@ -245,26 +252,28 @@ class EntityExtractorTest {
                   "researchAreas": []
                 }
                 ```
-            """)
+            """
+            )
         )
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         val entities = entityExtractor.extractEntities("")
-        
+
         assertTrue(entities.concepts.isEmpty())
         assertTrue(entities.methods.isEmpty())
         assertTrue(entities.datasets.isEmpty())
         assertTrue(entities.researchAreas.isEmpty())
     }
-    
+
     @Test
     fun `should include document title in extraction prompt`() {
         val text = "Research content about fog computing."
         val title = "Fog Computing for Military Applications"
-        
+
         val mockResponse = Response<AiMessage>(
-            AiMessage("""
+            AiMessage(
+                """
                 ```json
                 {
                   "concepts": [],
@@ -273,13 +282,14 @@ class EntityExtractorTest {
                   "researchAreas": []
                 }
                 ```
-            """)
+            """
+            )
         )
-        
+
         every { mockChatModel.generate(any()) } returns mockResponse
-        
+
         entityExtractor.extractEntities(text, title)
-        
+
         // Verify that the mock was called with a prompt containing the title
         verify { mockChatModel.generate(match { it.contains("Document Title: $title") }) }
     }

@@ -9,55 +9,55 @@ import org.springframework.stereotype.Component
 class EntityExtractor(
     private val chatModel: ChatLanguageModel
 ) {
-    
+
     data class ExtractedEntities(
         val concepts: List<ExtractedConcept>,
         val methods: List<ExtractedMethod>,
         val datasets: List<ExtractedDataset>,
         val researchAreas: List<ExtractedResearchArea>
     )
-    
+
     data class ExtractedConcept(
         val name: String,
         val description: String,
         val confidence: Double,
         val context: String
     )
-    
+
     data class ExtractedMethod(
         val name: String,
         val description: String,
         val confidence: Double,
         val context: String
     )
-    
+
     data class ExtractedDataset(
         val name: String,
         val description: String,
         val confidence: Double,
         val context: String
     )
-    
+
     data class ExtractedResearchArea(
         val name: String,
         val description: String,
         val confidence: Double,
         val context: String
     )
-    
+
     /**
      * Extract entities from document text using LLM
      */
     fun extractEntities(text: String, documentTitle: String? = null): ExtractedEntities {
         val prompt = buildExtractionPrompt(text, documentTitle)
         val response = chatModel.generate(prompt)
-        
+
         return parseExtractionResponse(response.content().text())
     }
-    
+
     private fun buildExtractionPrompt(text: String, documentTitle: String? = null): String {
         val titleContext = documentTitle?.let { "Document Title: $it\n\n" } ?: ""
-        
+
         return """
             $titleContext
             You are an expert research assistant specializing in academic text analysis. 
@@ -100,7 +100,7 @@ class EntityExtractor(
             Be conservative with confidence scores - only include entities you're reasonably certain about.
         """.trimIndent()
     }
-    
+
     private fun parseExtractionResponse(response: String): ExtractedEntities {
         return try {
             // Extract JSON from response
@@ -108,7 +108,7 @@ class EntityExtractor(
                 .find(response)
                 ?.groupValues?.get(1)
                 ?: response.trim()
-            
+
             // Parse JSON (simplified approach - in production, use proper JSON parser)
             parseJsonToEntities(jsonMatch)
         } catch (e: Exception) {
@@ -116,23 +116,23 @@ class EntityExtractor(
             ExtractedEntities(emptyList(), emptyList(), emptyList(), emptyList())
         }
     }
-    
+
     private fun parseJsonToEntities(json: String): ExtractedEntities {
         // This is a simplified JSON parser - in production, use Jackson or similar
         val concepts = parseEntityArray<ExtractedConcept>(json, "concepts")
         val methods = parseEntityArray<ExtractedMethod>(json, "methods")
         val datasets = parseEntityArray<ExtractedDataset>(json, "datasets")
         val researchAreas = parseEntityArray<ExtractedResearchArea>(json, "researchAreas")
-        
+
         return ExtractedEntities(concepts, methods, datasets, researchAreas)
     }
-    
+
     private inline fun <reified T> parseEntityArray(json: String, key: String): List<T> {
         // Simplified parsing - in production, use proper JSON deserialization
         return try {
             val pattern = Regex("\"$key\"\\s*:\\s*\\[(.*?)\\]", RegexOption.DOT_MATCHES_ALL)
             val match = pattern.find(json) ?: return emptyList()
-            
+
             val arrayContent = match.groupValues[1]
             // This would need proper JSON parsing in production
             emptyList() // Placeholder
@@ -140,7 +140,7 @@ class EntityExtractor(
             emptyList()
         }
     }
-    
+
     /**
      * Extract entities with specific focus on concepts
      */
@@ -148,7 +148,7 @@ class EntityExtractor(
         val entities = extractEntities(text)
         return entities.concepts.filter { it.confidence >= 0.7 }
     }
-    
+
     /**
      * Extract entities with specific focus on methods
      */
@@ -156,7 +156,7 @@ class EntityExtractor(
         val entities = extractEntities(text)
         return entities.methods.filter { it.confidence >= 0.7 }
     }
-    
+
     /**
      * Extract entities with specific focus on research areas
      */
@@ -164,7 +164,7 @@ class EntityExtractor(
         val entities = extractEntities(text)
         return entities.researchAreas.filter { it.confidence >= 0.6 }
     }
-    
+
     /**
      * Validate and clean extracted entities
      */
@@ -176,12 +176,12 @@ class EntityExtractor(
             researchAreas = entities.researchAreas.filter { isValidEntity(it.name, it.confidence) }
         )
     }
-    
+
     private fun isValidEntity(name: String, confidence: Double): Boolean {
-        return name.isNotBlank() && 
-               name.length > 2 && 
-               confidence >= 0.5 &&
-               !name.lowercase().contains("example") &&
-               !name.lowercase().contains("etc")
+        return name.isNotBlank() &&
+                name.length > 2 &&
+                confidence >= 0.5 &&
+                !name.lowercase().contains("example") &&
+                !name.lowercase().contains("etc")
     }
 }

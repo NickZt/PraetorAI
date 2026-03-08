@@ -11,10 +11,10 @@ class ContentExtractor {
     fun extract(filePath: String): ExtractedDocument {
         val file = File(filePath)
         val metadata = Metadata()
-        
+
         // Tika parses content to string
         val content = FileInputStream(file).use { stream ->
-             tika.parseToString(stream, metadata)
+            tika.parseToString(stream, metadata)
         }
 
         return ExtractedDocument(

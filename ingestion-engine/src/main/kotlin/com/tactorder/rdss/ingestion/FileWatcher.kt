@@ -24,15 +24,15 @@ class FileWatcher(
         // OR use the blocking watch service API carefully.
         // For simplicity and robustness in a fog node (often linux), specific OS events are good, 
         // but a polling interval is often safer for "drop file" scenarios to ensure write completion.
-        
+
         // Let's use a simple periodic scan for now to avoid "file still writing" issues, 
         // or just use a standard WatchService in a blocking thread.
-        
+
         // Actually, let's use a vertx timer to scan "new" files.
         // Implementation detail: Keep track of processed files? 
         // Or move them to "processed" folder?
         // Moving is safer.
-        
+
         vertx.setPeriodic(5000) {
             vertx.fileSystem().readDir(ingestPath) { result ->
                 if (result.succeeded()) {
@@ -40,10 +40,10 @@ class FileWatcher(
                         // processing logic: usually move to "processing" then fire event
                         // For MVP: just fire event and assume idempotent or move logic is handled by consumer?
                         // Better: Move to 'staging' and then fire.
-                        
+
                         if (!filePath.endsWith(".tmp") && !filePath.endsWith(".processed")) {
-                           logger.info("Found new file: $filePath")
-                           eventBus.publish("ingestion.new_file", filePath)
+                            logger.info("Found new file: $filePath")
+                            eventBus.publish("ingestion.new_file", filePath)
                         }
                     }
                 } else {

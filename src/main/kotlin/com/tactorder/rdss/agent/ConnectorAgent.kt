@@ -19,9 +19,9 @@ class ConnectorAgent(
     private val conceptRepository: ConceptRepository,
     private val sourceDocumentRepository: SourceDocumentRepository
 ) {
-    
+
     private val logger = KotlinLogging.logger {}
-    
+
     data class Connection(
         val fromEntity: String,
         val toEntity: String,
@@ -30,14 +30,14 @@ class ConnectorAgent(
         val reasoning: String,
         val evidence: List<String>
     )
-    
+
     data class SimilarityResult(
         val entityId: String,
         val entityType: String,
         val similarity: Double,
         val explanation: String
     )
-    
+
     /**
      * Find semantic similarities between concepts using vector search
      */
@@ -46,16 +46,16 @@ class ConnectorAgent(
         threshold: Double = 0.8,
         maxResults: Int = 20
     ): List<SimilarityResult> {
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         logger.info { "Finding semantic similarities for concept: ${concept.name}" }
-        
+
         // Generate embedding for the concept
         val conceptEmbedding = embeddingModel.embed(concept.description).content()
-        
+
         // Search for similar entities in Weaviate
         val similarEntities = searchSimilarEntities(conceptEmbedding, threshold, maxResults)
-        
+
         return similarEntities.map { entity ->
             SimilarityResult(
                 entityId = entity.id,
@@ -65,7 +65,7 @@ class ConnectorAgent(
             )
         }
     }
-    
+
     /**
      * Find indirect connections between concepts using graph traversal
      */
@@ -75,9 +75,9 @@ class ConnectorAgent(
         maxDepth: Int = 3
     ): List<List<String>> {
         logger.info { "Finding indirect connections between $conceptId1 and $conceptId2" }
-        
+
         val paths = mutableListOf<List<String>>()
-        
+
         // Use Neo4j to find paths between concepts
         val query = """
             MATCH path = shortestPath(
@@ -86,24 +86,24 @@ class ConnectorAgent(
             WHERE c1.id = '$conceptId1' AND c2.id = '$conceptId2'
             RETURN [node in nodes(path) | node.id] as path
         """
-        
+
         // Execute query and collect paths (simplified - would need proper Neo4j template)
         // val result = neo4jTemplate.query(query, emptyMap<String, Any>())
         // result.forEach { row ->
         //     paths.add(row["path"] as List<String>)
         // }
-        
+
         return paths
     }
-    
+
     /**
      * Detect bibliographic coupling between documents
      */
     fun findBibliographicCoupling(documentId: String, threshold: Int = 2): List<String> {
         logger.info { "Finding bibliographic coupling for document: $documentId" }
-        
+
         val coupledDocuments = mutableListOf<String>()
-        
+
         // Find documents that cite the same sources
         val query = """
             MATCH (d1:SourceDocument)-[:CITES]->(common:SourceDocument)<-[:CITES]-(d2:SourceDocument)
@@ -113,16 +113,16 @@ class ConnectorAgent(
             RETURN d2.id as documentId, commonCitations
             ORDER BY commonCitations DESC
         """
-        
+
         // Execute query and collect results
         // val result = neo4jTemplate.query(query, emptyMap<String, Any>())
         // result.forEach { row ->
         //     coupledDocuments.add(row["documentId"] as String)
         // }
-        
+
         return coupledDocuments
     }
-    
+
     /**
      * Use LLM to reason about potential connections
      */
@@ -132,18 +132,18 @@ class ConnectorAgent(
         entityId2: String,
         entityType2: String
     ): List<Connection> {
-        
+
         logger.info { "LLM reasoning about connections between $entityId1 and $entityId2" }
-        
+
         val entity1 = getEntity(entityId1, entityType1)
         val entity2 = getEntity(entityId2, entityType2)
-        
+
         val prompt = buildConnectionReasoningPrompt(entity1, entity2)
         val response = chatModel.generate(prompt)
-        
+
         return parseConnectionResponse(response.content().text(), entityId1, entityId2)
     }
-    
+
     private fun buildConnectionReasoningPrompt(entity1: Any, entity2: Any): String {
         return """
             You are an expert research analyst specializing in identifying relationships between academic concepts and documents.
@@ -186,7 +186,7 @@ class ConnectorAgent(
             Be conservative with confidence scores - only suggest connections you're reasonably confident about.
         """.trimIndent()
     }
-    
+
     private fun formatEntity(entity: Any): String {
         return when (entity) {
             is Concept -> """
@@ -196,7 +196,7 @@ class ConnectorAgent(
                 Maturity: ${entity.maturity}
                 Tags: ${entity.tags.joinToString(", ")}
             """.trimIndent()
-            
+
             is SourceDocument -> """
                 Type: Document
                 Title: ${entity.title}
@@ -204,11 +204,11 @@ class ConnectorAgent(
                 Year: ${entity.year ?: "Unknown"}
                 Abstract: ${entity.abstract ?: "No abstract available"}
             """.trimIndent()
-            
+
             else -> "Unknown entity type"
         }
     }
-    
+
     private fun parseConnectionResponse(response: String, entityId1: String, entityId2: String): List<Connection> {
         return try {
             // Extract JSON from response
@@ -216,7 +216,7 @@ class ConnectorAgent(
                 .find(response)
                 ?.groupValues?.get(1)
                 ?: response.trim()
-            
+
             // Parse connections (simplified - would need proper JSON parsing)
             emptyList<Connection>() // Placeholder
         } catch (e: Exception) {
@@ -224,7 +224,7 @@ class ConnectorAgent(
             emptyList()
         }
     }
-    
+
     private fun getEntity(entityId: String, entityType: String): Any {
         return when (entityType.lowercase()) {
             "concept" -> conceptRepository.findById(entityId).orElseThrow()
@@ -232,7 +232,7 @@ class ConnectorAgent(
             else -> throw IllegalArgumentException("Unknown entity type: $entityType")
         }
     }
-    
+
     private fun searchSimilarEntities(
         embedding: FloatArray,
         threshold: Double,
@@ -241,20 +241,20 @@ class ConnectorAgent(
         // Simplified Weaviate search - would need proper implementation
         return emptyList()
     }
-    
+
     private fun generateSimilarityExplanation(concept: Concept, similarEntity: SimilarEntity): String {
         return "Concept '${concept.name}' shares semantic similarity with ${similarEntity.type} '${similarEntity.name}' based on vector embedding analysis."
     }
-    
+
     /**
      * Suggest new connections for a concept
      */
     suspend fun suggestConnections(conceptId: String): List<Connection> {
         logger.info { "Suggesting connections for concept: $conceptId" }
-        
+
         val concept = conceptRepository.findById(conceptId).orElseThrow()
         val suggestions = mutableListOf<Connection>()
-        
+
         // Find semantic similarities
         val similarities = findSemanticSimilarities(conceptId)
         similarities.forEach { similarity ->
@@ -271,7 +271,7 @@ class ConnectorAgent(
                 )
             }
         }
-        
+
         // Use LLM to find additional connections
         val allConcepts = conceptRepository.findAll()
         allConcepts.filter { it.id != conceptId }.take(10).forEach { otherConcept ->
@@ -281,10 +281,10 @@ class ConnectorAgent(
             )
             suggestions.addAll(connections)
         }
-        
+
         return suggestions.sortedByDescending { it.confidence }
     }
-    
+
     private data class SimilarEntity(
         val id: String,
         val name: String,

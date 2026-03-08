@@ -10,34 +10,34 @@ import java.time.LocalDateTime
 data class Experiment(
     @Id
     val id: String,
-    
+
     @Property
     val name: String,
-    
+
     @Property
     val date: LocalDateTime,
-    
+
     @Property
     val hypothesis: String,
-    
+
     @Property
     val methodology: String?,
-    
+
     @Property
     val resultsSummary: String?,
-    
+
     @Property
     val conclusion: String?,
-    
+
     @Property
     val codeRepo: String?,
-    
+
     @Property
     val status: ExperimentStatus,
-    
+
     @Relationship(type = "VALIDATES", direction = Relationship.Direction.OUTGOING)
     val validates: List<Concept> = emptyList(),
-    
+
     @Relationship(type = "CHALLENGES", direction = Relationship.Direction.OUTGOING)
     val challenges: List<Concept> = emptyList()
 )

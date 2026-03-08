@@ -9,13 +9,13 @@ import org.springframework.data.neo4j.core.schema.Relationship
 data class ResearchArea(
     @Id
     val id: String,
-    
+
     @Property
     val name: String,
-    
+
     @Property
     val description: String?,
-    
+
     @Relationship(type = "SUBAREA_OF", direction = Relationship.Direction.OUTGOING)
     val parentArea: ResearchArea?
 )
