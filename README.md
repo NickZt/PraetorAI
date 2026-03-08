@@ -1,20 +1,24 @@
+# Praetor AI (formerly RDSS)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+**Praetor AI** is a sovereign Edge AI platform designed for constrained environments and tactical operations. It transforms unstructured sensor data and documents into a deterministic, **Temporal Knowledge Graph** deployed entirely on edge hardware.
+
 ┌─────────────────────────────────────────────────────────────┐
-│ CORE KNOWLEDGE ARCHITECTURE │
+│ CORE KNOWLEDGE ARCHITECTURE                                 │
 ├─────────────────────────────────────────────────────────────┤
-│ │
-│ 📄 Source Documents → 🧠 Your Concepts │
-│  (Papers, books, reports)         (Evolving ideas)         │
-│ │
-│ ↓ ↓ │
-│ │
-│ 🔗 Citation Network ↔ 💡 Concept Evolution │
-│  (Who influenced what)             (How ideas develop)     │
-│ │
-│ ↓ ↓ │
-│ │
-│ 📊 Relationship Graph → 🎯 Decision Support │
-│  (Connections & patterns)          (What to research next) │
-│ │
+│                                                             │
+│ 📄 Source Documents → 🧠 Your Concepts                      │
+│  (Papers, books, reports)         (Evolving ideas)          │
+│                                                             │
+│ ↓                                 ↓                         │
+│                                                             │
+│ 🔗 Citation Network ↔ 💡 Concept Evolution                  │
+│  (Who influenced what)             (How ideas develop)      │
+│                                                             │
+│ ↓                                 ↓                         │
+│                                                             │
+│ 📊 Temporal Graph   → 🎯 Decision Support                    │
+│  (Connections & patterns)          (What to research next)  │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 
 You (Obsidian/LogSeq)
@@ -50,29 +54,26 @@ You (Obsidian/LogSeq)
 └─────────────────────────────┘
 
 Knowledge Graph:
+- Neo4j 5.x + APOC (Temporal GraphRAG)
+- strict temporal versioning (ActionNode based `StartDate`/`EndDate`)
 
-- Neo4j 5.x для relationship mapping
-- Специфічні node types для research domain
+Integration & Core Stack:
+- Pure Kotlin / Eclipse Vert.X Multi-Reactor
+- Zero-Copy Pipeline via DirectByteBuffer (No Python in transport layer)
+- Earliest Deadline First (EDF) scheduler for CRITICAL priority event routing
 
-Vector & Semantic Layer:
-
-- Weaviate для embeddings
-- BGE-M3 (multilingual) для українська/English
-
-Document Processing:
-
-- Apache Tika + PDF parsing
-- Zotero integration для citation extraction
+Inference Engine (MNNLLama):
+- Edge AI inference engine locally deployed
+- Alibaba MNN + ONNX runtime targeting ARM & Edge hardware
+- Single Active Model constraint for 2GB RAM edge devices
 
 AI Models:
-
-- Local: Llama 3.3 70B (reasoning) або DeepSeek R1
-- Specialized: Gemini 2.0 Flash Thinking для research tasks
-- Fallback: Claude 3.5 Sonnet для complex synthesis
+- LLM: `Qwen2.5-7B` / `native-Qwen3-Embedding`
+- Zero-Shot NER: `gliner-bi-base-v2.0` (bi-encoder architecture for $\mathcal{O}(1)$ edge speed)
 
 ## How to Run
 
-The RDSS uses a unified Vert.x bootstrap launcher for development.
+Praetor AI uses a unified Vert.x bootstrap launcher for development.
 
 ### 1. Prerequisites
 
