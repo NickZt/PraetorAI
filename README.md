@@ -1,6 +1,6 @@
 # Praetor AI (formerly RDSS)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-**Praetor AI** is a sovereign Edge AI platform designed for constrained environments and tactical operations. It transforms unstructured sensor data and documents into a deterministic, **Temporal Knowledge Graph** deployed entirely on edge hardware.
+**Praetor AI** is a sovereign Edge AI platform designed for constrained environments and highly sensitive data operations. It transforms unstructured sensor data and documents into a deterministic, **Temporal Knowledge Graph** deployed entirely on edge hardware.
 
 ┌─────────────────────────────────────────────────────────────┐
 │ CORE KNOWLEDGE ARCHITECTURE                                 │

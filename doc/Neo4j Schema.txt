@@ -17,7 +17,7 @@ FOR (d:SourceDocument) REQUIRE d.id IS UNIQUE;
   pdf_path: "/vault/sources/paper.pdf",
   bibtex_key: "@inproceedings{...",
   date_added: datetime(),
-  tags: ["fog-computing", "military", "edge-ai"]
+  tags: ["fog-computing", "edge-ai"]
 })
 
 // Ваші концепції (розвиваються)
@@ -34,7 +34,7 @@ FOR (c:Concept) REQUIRE c.id IS UNIQUE;
   current_version: 3,
   status: "active", // active/archived/merged
   parent_concepts: ["fog-computing", "ml-inference"],
-  tags: ["core-research", "military-application"]
+  tags: ["core-research", "field-application"]
 })
 
 // Версії концепцій (snapshot evolution)
