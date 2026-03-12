@@ -12,7 +12,7 @@ llm.embedding.model: "native-Qwen3-Embedding-4B-MNN"
 llm.timeout: 60
 
 extraction.mode: "gliner"
-gliner.model: "gliner-bi-v2"
+gliner.model: "native-gliner-bi-v2"
 
 ingestion.path: "/home/nickzt/Projects/TactOrder/RDSS/data/ingest"
 ingestion.chunk-size: 1000

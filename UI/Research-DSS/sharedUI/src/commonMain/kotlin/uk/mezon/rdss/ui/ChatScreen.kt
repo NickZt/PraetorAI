@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.aakira.napier.Napier
 import io.ktor.client.request.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -22,7 +23,7 @@ data class ChatMessage(val text: String, val isUser: Boolean, val timestamp: Str
 fun ChatScreen() {
     val apiClient = remember { PraetorApiClient() }
     val coroutineScope = rememberCoroutineScope()
-    
+
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
     var dateText by remember { mutableStateOf("") }
@@ -34,15 +35,19 @@ fun ChatScreen() {
         // Initial fetch
         stats = apiClient.fetchStats()
         // Simple polling every 10 seconds for metrics
-        while(true) {
+        while (true) {
             delay(10000)
             stats = apiClient.fetchStats()
         }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = "Praetor AI: Temporal Intelligence",
                 style = MaterialTheme.typography.headlineMedium,
@@ -76,7 +81,7 @@ fun ChatScreen() {
                 }
             }
         }
-        
+
         // Ingestion Bar
         Row(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -113,6 +118,7 @@ fun ChatScreen() {
                                 isUser = false,
                                 timestamp = "INGESTION"
                             )
+                            Napier.d { "System Event: ${response.status ?: response.error}" }
                             ingestPath = ""
                             stats = apiClient.fetchStats() // Refresh exact stats after ingest click
                         }
@@ -122,7 +128,7 @@ fun ChatScreen() {
                 Text("Submit Source")
             }
         }
-        
+
         HorizontalDivider()
 
         // Chat History
@@ -163,13 +169,16 @@ fun ChatScreen() {
             Button(
                 onClick = {
                     if (inputText.isNotBlank()) {
-                        val userMsg = ChatMessage(text = inputText, isUser = true, timestamp = dateText.takeIf { it.isNotBlank() })
+                        val userMsg = ChatMessage(
+                            text = inputText,
+                            isUser = true,
+                            timestamp = dateText.takeIf { it.isNotBlank() })
                         messages = messages + userMsg
                         val queryToRun = inputText
                         val dateToRun = dateText
                         inputText = ""
                         isLoading = true
-                        
+
                         coroutineScope.launch {
                             val response = apiClient.queryRagAgent(queryToRun, dateToRun)
                             isLoading = false
@@ -177,6 +186,7 @@ fun ChatScreen() {
                                 text = response.answer ?: response.error ?: "Operation Failed",
                                 isUser = false
                             )
+                            Napier.d { "apiClient.queryRagAgent: ${response.answer ?: response.error ?: "Operation Failed"}" }
                         }
                     }
                 },
@@ -191,8 +201,10 @@ fun ChatScreen() {
 @Composable
 fun ChatBubble(message: ChatMessage) {
     val alignment = if (message.isUser) Alignment.End else Alignment.Start
-    val bgColor = if (message.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (message.isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val bgColor =
+        if (message.isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    val textColor =
+        if (message.isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
         Surface(
