@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.ktor.client.request.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.mezon.rdss.api.PraetorApiClient
 import uk.mezon.rdss.utils.pickFile
@@ -26,17 +28,54 @@ fun ChatScreen() {
     var dateText by remember { mutableStateOf("") }
     var ingestPath by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var stats by remember { mutableStateOf(uk.mezon.rdss.api.StatsResponse()) }
+
+    LaunchedEffect(Unit) {
+        // Initial fetch
+        stats = apiClient.fetchStats()
+        // Simple polling every 10 seconds for metrics
+        while(true) {
+            delay(10000)
+            stats = apiClient.fetchStats()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         
-        // Header
-        Text(
-            text = "Praetor AI: Temporal Intelligence",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Praetor AI: Temporal Intelligence",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Metrics Widget
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                modifier = Modifier.padding(bottom = 16.dp)
+            ) {
+                Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Documents", style = MaterialTheme.typography.labelSmall)
+                        Text(text = "${stats.documents}", fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Concepts", style = MaterialTheme.typography.labelSmall)
+                        Text(text = "${stats.concepts}", fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Sections", style = MaterialTheme.typography.labelSmall)
+                        Text(text = "${stats.sections}", fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Relations", style = MaterialTheme.typography.labelSmall)
+                        Text(text = "${stats.relations}", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
         
         // Ingestion Bar
         Row(
@@ -75,6 +114,7 @@ fun ChatScreen() {
                                 timestamp = "INGESTION"
                             )
                             ingestPath = ""
+                            stats = apiClient.fetchStats() // Refresh exact stats after ingest click
                         }
                     }
                 }

@@ -77,6 +77,24 @@ class ApiVerticle : CoroutineVerticle() {
             // TODO: Fetch graph data from Neo4j directly or via service
             ctx.response().end(JsonObject().put("nodes", listOf<Any>()).put("edges", listOf<Any>()).encode())
         }
+        
+        // Graph Statistics Endpoint
+        router.get("/stats").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                try {
+                    val result = vertx.eventBus().request<JsonObject>("graph.stats", JsonObject()).coAwait()
+                    ctx.response()
+                        .putHeader("Content-Type", "application/json")
+                        .end(result.body().encode())
+                } catch (e: Exception) {
+                    logger.error("Stats query failed", e)
+                    ctx.response()
+                        .setStatusCode(500)
+                        .putHeader("Content-Type", "application/json")
+                        .end(JsonObject().put("error", e.message).encode())
+                }
+            }
+        }
 
         vertx.createHttpServer()
             .requestHandler(router)

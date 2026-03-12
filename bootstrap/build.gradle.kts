@@ -17,4 +17,5 @@ dependencies {
     implementation(libs.vertx.core)
     implementation("io.vertx:vertx-web-client:4.5.8")
     implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("org.apache.logging.log4j:log4j-to-slf4j:2.20.0")
 }

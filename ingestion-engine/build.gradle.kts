@@ -25,7 +25,7 @@ dependencies {
     implementation(libs.langchain4j.open.ai)
     implementation(libs.neo4j.ogm)
     implementation(libs.neo4j.driver)
-
+    implementation("io.vertx:vertx-web-client:4.5.8")
     // Tika & PDFBox
     implementation("org.apache.tika:tika-core:2.9.2")
     implementation("org.apache.tika:tika-parsers-standard-package:2.9.2")

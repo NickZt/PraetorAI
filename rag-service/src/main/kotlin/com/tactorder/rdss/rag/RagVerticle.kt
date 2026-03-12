@@ -56,7 +56,37 @@ class RagVerticle : CoroutineVerticle() {
             }
         }
 
-        logger.info("RagVerticle started and listening on 'rag.query'")
+        // EventBus Consumer for Graph Statistics
+        vertx.eventBus().consumer<JsonObject>("graph.stats") { message ->
+            launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val stats = getGraphStatistics()
+                    message.reply(stats)
+                } catch (e: Exception) {
+                    logger.error("Failed to fetch graph stats", e)
+                    message.fail(500, e.message)
+                }
+            }
+        }
+
+        logger.info("RagVerticle started and listening on 'rag.query' and 'graph.stats'")
+    }
+
+    private suspend fun getGraphStatistics(): JsonObject {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            neo4jDriver.session().use { session ->
+                val docs = session.run("MATCH (n:Document) RETURN count(n) as docs").single().get("docs").asLong()
+                val concepts = session.run("MATCH (n:Concept) RETURN count(n) as concepts").single().get("concepts").asLong()
+                val sections = session.run("MATCH (n:Section) RETURN count(n) as sections").single().get("sections").asLong()
+                val relations = session.run("MATCH ()-[r]->() RETURN count(r) as relations").single().get("relations").asLong()
+                
+                JsonObject()
+                    .put("documents", docs)
+                    .put("concepts", concepts)
+                    .put("sections", sections)
+                    .put("relations", relations)
+            }
+        }
     }
 
     private fun executeRagPipeline(query: String, date: LocalDate?): String {
@@ -64,7 +94,7 @@ class RagVerticle : CoroutineVerticle() {
         val apiKey = appConfig.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local")
         val embeddingModel = OpenAiEmbeddingModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.embedding.model", "native-Qwen3-Embedding-0.6B-MNN"))
+            .modelName(appConfig.getString("llm.embedding.model", "Qwen3-Embedding-4B-MNN"))
             .apiKey(apiKey)
             .timeout(Duration.ofSeconds(30))
             .build()
@@ -73,7 +103,7 @@ class RagVerticle : CoroutineVerticle() {
 
         val chatModel = OpenAiChatModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.chat.model", "native-qwen2.5-7b"))
+            .modelName(appConfig.getString("llm.chat.model", "qwen2.5-7b"))
             .apiKey(apiKey)
             .timeout(Duration.ofSeconds(60))
             .build()

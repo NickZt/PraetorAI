@@ -128,34 +128,29 @@ def generate_fragos():
         json.dump(logs, f, indent=2)
     print("✅ TactOrder OPORD/FRAGO Generated.")
 
+def download_url_to_file(url, dest_path):
+    print(f"      Downloading {os.path.basename(dest_path)}...")
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req) as response:
+        with open(dest_path, "wb") as f:
+            f.write(response.read())
+
 def generate_field_manuals():
-    print("⏳ [EXP-03 TactOrder] Generating US and Ukrainian Field Manuals...")
-    target_us = os.path.join(TACTORDER_DIR, "FieldManuals", "US_FM_3_0_Operations.md")
-    content_us = """# Field Manual No. 3-0: Operations
-**Effective Date:** 2022-10-01
-## Chapter 1: Foundations of Operations
-The Army's primary mission is to organize, train, and equip forces to conduct prompt and sustained land combat operations. 
-Multi-domain operations are the Army's operating concept.
+    print("⏳ [EXP-03 TactOrder] Downloading REAL US and Ukrainian Field Manuals...")
+    
+    target_us = os.path.join(TACTORDER_DIR, "FieldManuals", "US_FM_3_0_Operations.pdf")
+    try:
+        download_url_to_file("https://irp.fas.org/doddir/army/fm3-0.pdf", target_us)
+    except Exception as e:
+        print(f"⚠️ Could not download US FM 3-0: {e}")
 
-## Chapter 4: Defense
-A defensive operation is a task conducted to defeat an enemy attack, gain time, economize forces, and develop conditions favorable for offensive or stability operations.
-"""
-    with open(target_us, "w") as f:
-        f.write(content_us)
-
-    target_ua = os.path.join(TACTORDER_DIR, "FieldManuals", "UA_Combat_Manual_Part3.md")
-    content_ua = """# Бойовий статут Сухопутних військ ЗСУ (Частина III: Взвод, відділення, танк)
-**Effective Date:** 2020-04-12
-## Глава 2: Оборона
-Оборона має бути стійкою і активною, здатною відбити удари противника із застосуванням усіх видів зброї.
-Мета оборони - зірвати або відбити наступ противника, завдати йому максимальних втрат.
-
-## Глава 3: Наступ
-Наступ - основний вид бою. Тільки рішучий наступ у високому темпі дозволяє розгромити противника.
-"""
-    with open(target_ua, "w") as f:
-        f.write(content_ua)
-    print("✅ US and UA Field Manual Mocks Generated.")
+    target_ua = os.path.join(TACTORDER_DIR, "FieldManuals", "UA_Combat_Manual_Part3.pdf")
+    try:
+        download_url_to_file("https://chtyvo.org.ua/authors/Zbroini_Syly_Ukrainy/Boiovyi_statut_Sukhoputnykh_viisk_Chastyna_III_vzvod_viddilennia_ekipazh_tanka_vyd_2010.pdf", target_ua)
+    except Exception as e:
+        print(f"⚠️ Could not download UA Combat Manual: {e}")
+        
+    print("✅ Authentic Field Manuals Downloaded.")
 
 def link_user_articles():
     print("⏳ Linking User's Articles directory...")

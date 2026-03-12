@@ -35,11 +35,14 @@ class IngestionVerticle : CoroutineVerticle() {
 
         // Setup Chat Model for LLMExtractor
         val chatModel = OpenAiChatModel.builder().baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(config.getString("llm.chat.model", "native-qwen2.5-7b"))
+            .modelName(config.getString("llm.chat.model", "onnx-Qwen2.5-0.5B-Instruct-ONNX"))
             .apiKey(config.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local"))
             .timeout(Duration.ofSeconds(60)).build()
 
         val llmExtractor = LLMExtractor(chatModel)
+        val glinerExtractor = GlinerExtractor(vertx, config)
+
+        val extractionMode = config.getString("extraction.mode", System.getenv("EXTRACTION_MODE") ?: "llm")
 
         // Start FileWatcher
         val fileWatcher = FileWatcher(vertx, config)
@@ -55,7 +58,7 @@ class IngestionVerticle : CoroutineVerticle() {
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     ingestionMutex.withLock {
-                        processFile(filePath, contentExtractor, semanticChunker, llmExtractor, graphWriter)
+                        processFile(filePath, contentExtractor, semanticChunker, llmExtractor, glinerExtractor, graphWriter, extractionMode)
                     }
                     message.reply(JsonObject().put("status", "success"))
                 } catch (e: Exception) {
@@ -73,7 +76,9 @@ class IngestionVerticle : CoroutineVerticle() {
         contentExtractor: ContentExtractor,
         semanticChunker: SemanticChunker,
         llmExtractor: LLMExtractor,
-        graphWriter: GraphWriter
+        glinerExtractor: GlinerExtractor,
+        graphWriter: GraphWriter,
+        extractionMode: String
     ) {
         val file = File(filePath)
         if (!file.exists()) {
@@ -109,10 +114,14 @@ class IngestionVerticle : CoroutineVerticle() {
         for ((index, chunk) in chunks.withIndex()) {
             logger.info("Processing chunk ${index + 1}/${chunks.size} through LLMExtractor")
             try {
-                val extractedEntities = llmExtractor.extract(chunk)
-
-                // Map the JSON structure to Domain Entities
-                val mappedEntities = llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                val mappedEntities = if (extractionMode == "gliner") {
+                    logger.info("Extracting chunk through GLiNER Bi-Encoder...")
+                    glinerExtractor.extractAndMap(chunk, documentNode)
+                } else {
+                    logger.info("Extracting chunk through LLM Qwen Chat...")
+                    val extractedEntities = llmExtractor.extract(chunk)
+                    llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                }
 
                 // 5. Save to Graph
                 if (mappedEntities.isNotEmpty()) {

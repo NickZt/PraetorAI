@@ -3,6 +3,7 @@ package uk.mezon.rdss.api
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -22,6 +23,15 @@ data class IngestRequest(val path: String)
 
 @Serializable
 data class IngestResponse(val status: String? = null, val error: String? = null)
+
+@Serializable
+data class StatsResponse(
+    val documents: Long = 0,
+    val concepts: Long = 0,
+    val sections: Long = 0,
+    val relations: Long = 0,
+    val error: String? = null
+)
 
 class PraetorApiClient(private val baseUrl: String = "http://localhost:8081") {
     
@@ -53,6 +63,14 @@ class PraetorApiClient(private val baseUrl: String = "http://localhost:8081") {
             }.body()
         } catch (e: Exception) {
             IngestResponse(error = e.message ?: "Failed to connect to Praetor AI Gateway.")
+        }
+    }
+
+    suspend fun fetchStats(): StatsResponse {
+        return try {
+            client.get("$baseUrl/stats").body()
+        } catch (e: Exception) {
+            StatsResponse(error = e.message ?: "Failed to connect to Praetor AI Gateway.")
         }
     }
 }
