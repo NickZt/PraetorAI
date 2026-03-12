@@ -16,8 +16,8 @@ class GraphRetriever(private val driver: Driver) {
             MATCH (start) WHERE id(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: $depth,
-                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS',
-                labelFilter: '+Concept|+Law|+Section'
+                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
+                labelFilter: '+Concept|+Law|+Section|+ActionNode'
             })
             YIELD nodes, relationships
             RETURN nodes, relationships
@@ -52,19 +52,19 @@ class GraphRetriever(private val driver: Driver) {
         }
     }
 
-    // Placeholder for temporal filtering logic
+    // SOP 3.1: Temporal filtering logic using ActionNode metadata
     fun temporalFilter(graphData: List<JsonObject>, queryDate: LocalDate?): List<JsonObject> {
         if (queryDate == null) return graphData
-
-        // Filter logic: Check 'validFrom' / 'validTo' properties on Law nodes
-        // For relationships like AMENDS, check 'date'
 
         return graphData.filter { item ->
             val props = item.getJsonObject("props") ?: return@filter true
 
-            // Check validFrom/validTo
-            val validFrom = props.getString("validFrom")?.let { LocalDate.parse(it) }
-            val validTo = props.getString("validTo")?.let { LocalDate.parse(it) }
+            // SOP 3.1 checks StartDate/EndDate
+            val validFromStr = props.getString("StartDate") ?: props.getString("validFrom")
+            val validToStr = props.getString("EndDate") ?: props.getString("validTo")
+
+            val validFrom = validFromStr?.substringBefore("T")?.let { LocalDate.parse(it) }
+            val validTo = validToStr?.substringBefore("T")?.let { LocalDate.parse(it) }
 
             if (validFrom != null && queryDate.isBefore(validFrom)) return@filter false
             if (validTo != null && queryDate.isAfter(validTo)) return@filter false

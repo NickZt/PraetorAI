@@ -27,12 +27,42 @@ class GraphWriter(private val config: io.vertx.core.json.JsonObject) {
     fun saveEntities(entities: List<Any>) {
         val session = getSession()
         session.beginTransaction().use { tx ->
-            // Batch save if possible, or iterate
             entities.forEach { entity ->
+                // DEPRECATED: Standard OGM save() issues destructive MERGE operations on properties.
+                // Refactor to use appendActionNode() for temporal history.
                 session.save(entity)
             }
             tx.commit()
         }
+    }
+
+    /**
+     * SOP 3.1: Temporal Versioning via append-only ActionNodes.
+     * Replaces destructive in-place property updates.
+     */
+    fun appendActionNode(targetNodeId: String, actionType: String, properties: Map<String, Any>, startDate: String, endDate: String? = null) {
+        val session = getSession()
+        val cypher = """
+            MATCH (target) WHERE target.id = ${'$'}targetId
+            CREATE (action:ActionNode {
+                type: ${'$'}actionType,
+                StartDate: datetime(${'$'}startDate),
+                EndDate: case when ${'$'}endDate is not null then datetime(${'$'}endDate) else null end,
+                timestamp: datetime()
+            })
+            SET action += ${'$'}props
+            CREATE (target)-[:HAS_ACTION]->(action)
+        """.trimIndent()
+        
+        val params = mapOf(
+            "targetId" to targetNodeId,
+            "actionType" to actionType,
+            "startDate" to startDate,
+            "endDate" to endDate,
+            "props" to properties
+        )
+        
+        session.query(cypher, params)
     }
 
     // Specific methods for extracted JSON to Domain Entity mapping would go here

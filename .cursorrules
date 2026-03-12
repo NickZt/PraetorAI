@@ -1,0 +1,16 @@
+# Context & Documentation Rule
+Whenever architectural changes are made, or a design phase is completed, you MUST update the project documentation to reflect the new state. 
+
+Do NOT forget to document changes to the docs, README, and mem files. 
+
+**Required Files to Update**:
+1. `README.md`
+2. `doc/plan` (Original AI Prompt/Plan)
+3. "Memory Bank" files in `docs/`: 
+   - `docs/progress.md`
+   - `docs/activeContext.md`
+   - `docs/techContext.md`
+   - `docs/systemPatterns.md`
+4. `docs/architecture_manifesto_and_sop.md` (Primary SOPs)
+
+If you modify the logic of the application in a way that affects the architecture, flow, or status of the project, you must ensure these files are kept strictly in sync without being asked.
