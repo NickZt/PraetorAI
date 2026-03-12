@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 [EXP-01-ZERO-COPY] Zero-Copy Latency & Throughput Test
-Role: Senior C++ / Edge AI Engineer and QA Automation Lead
+
 
 Test the Zero-Copy buffer latency via Vert.X Gateway for 1000 RPS.
 """

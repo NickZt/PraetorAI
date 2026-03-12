@@ -40,7 +40,9 @@ class ApiVerticle : CoroutineVerticle() {
 
             // Publish to Ingestion Service (Fire and Forget)
             vertx.eventBus().publish("ingestion.new_file", filePath)
-            ctx.response().end(JsonObject().put("status", "Ingestion started for $filePath").encode())
+            ctx.response()
+                .putHeader("Content-Type", "application/json")
+                .end(JsonObject().put("status", "Ingestion started for $filePath").encode())
         }
 
         // RAG Query Endpoint

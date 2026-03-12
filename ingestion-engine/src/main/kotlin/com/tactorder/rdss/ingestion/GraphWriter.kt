@@ -24,6 +24,13 @@ class GraphWriter(private val config: io.vertx.core.json.JsonObject) {
         return sessionFactory.openSession()
     }
 
+    fun isDocumentIngested(md5Hash: String): Boolean {
+        val session = getSession()
+        val result = session.query("MATCH (d:Document {md5Hash: \$hash}) RETURN count(d) as count", mapOf("hash" to md5Hash))
+        val count = result.firstOrNull()?.get("count") as? Long ?: 0L
+        return count > 0
+    }
+
     fun saveEntities(entities: List<Any>) {
         val session = getSession()
         session.beginTransaction().use { tx ->

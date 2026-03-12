@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
-"""
-Dataset Preparation Script for Praetor AI Experiments
-Target Directory: /home/nickzt/Projects/TactOrder/Datasets/
-
-Downloads and/or generates the necessary datasets for E2E Validation:
-- EXP-01: CUAD (LexUa) & VisDrone Mock (TactOrder)
-- EXP-02: MAUD (LexUa) & MUC-4 Mock (TactOrder)
-- EXP-03: Temporal Laws (LexUa) & OPORD/FRAGO Logs (TactOrder)
-"""
-
 import os
 import json
-import uuid
 import datetime
+import urllib.request
+import pandas as pd
 
 DATASETS_DIR = "/home/nickzt/Projects/TactOrder/Datasets"
 LEXUA_DIR = os.path.join(DATASETS_DIR, "LexUa")
 TACTORDER_DIR = os.path.join(DATASETS_DIR, "TactOrder")
+
+# Load environment variable from .env
+env_path = "/home/nickzt/Projects/TactOrder/RDSS/.env"
+if os.path.exists(env_path):
+    with open(env_path) as f:
+        for line in f:
+            if line.startswith("HF_TOKEN="):
+                os.environ["HF_TOKEN"] = line.strip().split("=", 1)[1].strip()
+
+hf_token = os.environ.get("HF_TOKEN")
+
 
 def ensure_dirs():
     print("📂 Creating dataset directories...")
@@ -27,25 +29,30 @@ def ensure_dirs():
         os.makedirs(os.path.join(d, "VisDrone"), exist_ok=True)
         os.makedirs(os.path.join(d, "MUC-4"), exist_ok=True)
         os.makedirs(os.path.join(d, "FRAGO"), exist_ok=True)
+        os.makedirs(os.path.join(d, "FieldManuals"), exist_ok=True)
 
-def download_cuad():
-    print("⏳ [EXP-01 LexUa] Downloading CUAD dataset...")
-    target = os.path.join(LEXUA_DIR, "CUAD", "cuad_chunks.jsonl")
+def download_authenticated_hf_dataset(dataset_name, config_name, split, dest_csv):
+    """Downloads a dataset utilizing HF_TOKEN and saves as CSV."""
+    if not hf_token:
+        raise ValueError("HF_TOKEN not found in environment or .env file.")
     try:
         from datasets import load_dataset
-        ds = load_dataset("Zane222/cuad", split="train")
-        # Just grab first 50 texts and chunk them
-        with open(target, "w") as f:
-            for item in list(ds)[:50]:
-                text = item.get("context", "")
-                chunk = text[:1500] # Approximate 512 tokens
-                f.write(json.dumps({"text": chunk}) + "\n")
-        print("✅ CUAD Downloaded via HuggingFace.")
+        import pandas as pd
+        if config_name:
+            ds = load_dataset(dataset_name, config_name, split=split, token=hf_token, verification_mode="no_checks")
+        else:
+            ds = load_dataset(dataset_name, split=split, token=hf_token, verification_mode="no_checks")
+        df = ds.to_pandas()
+        df.to_csv(dest_csv, index=False)
     except Exception as e:
-        print(f"⚠️ HuggingFace load failed ({e}), generating MOCK CUAD text...")
-        with open(target, "w") as f:
-            for i in range(50):
-                f.write(json.dumps({"text": f"This is mock contract chunk {i} representing a 512 token payload for civil testing."}) + "\n")
+        print(f"❌ FATAL ERROR loading {dataset_name}: {e}")
+        raise e
+
+def download_cuad():
+    print("⏳ [EXP-01 LexUa] Downloading REAL CUAD Dataset from HuggingFace...")
+    target = os.path.join(LEXUA_DIR, "CUAD", "cuad.csv")
+    download_authenticated_hf_dataset("theatticusproject/cuad", "default", "train", target)
+    print(f"✅ REAL CUAD Downloaded to {target}")
 
 def generate_visdrone_mock():
     print("⏳ [EXP-01 TactOrder] Generating VisDrone Telemetry Mock...")
@@ -64,20 +71,10 @@ def generate_visdrone_mock():
     print("✅ VisDrone Mock Generated.")
 
 def download_maud():
-    print("⏳ [EXP-02 LexUa] Downloading MAUD dataset...")
-    target = os.path.join(LEXUA_DIR, "MAUD", "maud_texts.jsonl")
-    try:
-        from datasets import load_dataset
-        ds = load_dataset("ds_maud", "default", split="train")
-        with open(target, "w") as f:
-            for item in list(ds)[:50]:
-                f.write(json.dumps({"text": item.get("text", "")}) + "\n")
-        print("✅ MAUD Downloaded.")
-    except Exception as e:
-        print(f"⚠️ MAUD load failed ({e}), generating MOCK MAUD text...")
-        with open(target, "w") as f:
-            for i in range(50):
-                f.write(json.dumps({"text": f"Mock Merger Agreement {i} for NER scaling."}) + "\n")
+    print("⏳ [EXP-02 LexUa] Downloading REAL MAUD Dataset from HuggingFace...")
+    target = os.path.join(LEXUA_DIR, "MAUD", "maud.csv")
+    download_authenticated_hf_dataset("theatticusproject/maud", "default", "train", target)
+    print(f"✅ REAL MAUD Downloaded to {target}")
 
 def download_muc4():
     print("⏳ [EXP-02 TactOrder] MUC-4 Incident Mock...")
@@ -131,6 +128,48 @@ def generate_fragos():
         json.dump(logs, f, indent=2)
     print("✅ TactOrder OPORD/FRAGO Generated.")
 
+def generate_field_manuals():
+    print("⏳ [EXP-03 TactOrder] Generating US and Ukrainian Field Manuals...")
+    target_us = os.path.join(TACTORDER_DIR, "FieldManuals", "US_FM_3_0_Operations.md")
+    content_us = """# Field Manual No. 3-0: Operations
+**Effective Date:** 2022-10-01
+## Chapter 1: Foundations of Operations
+The Army's primary mission is to organize, train, and equip forces to conduct prompt and sustained land combat operations. 
+Multi-domain operations are the Army's operating concept.
+
+## Chapter 4: Defense
+A defensive operation is a task conducted to defeat an enemy attack, gain time, economize forces, and develop conditions favorable for offensive or stability operations.
+"""
+    with open(target_us, "w") as f:
+        f.write(content_us)
+
+    target_ua = os.path.join(TACTORDER_DIR, "FieldManuals", "UA_Combat_Manual_Part3.md")
+    content_ua = """# Бойовий статут Сухопутних військ ЗСУ (Частина III: Взвод, відділення, танк)
+**Effective Date:** 2020-04-12
+## Глава 2: Оборона
+Оборона має бути стійкою і активною, здатною відбити удари противника із застосуванням усіх видів зброї.
+Мета оборони - зірвати або відбити наступ противника, завдати йому максимальних втрат.
+
+## Глава 3: Наступ
+Наступ - основний вид бою. Тільки рішучий наступ у високому темпі дозволяє розгромити противника.
+"""
+    with open(target_ua, "w") as f:
+        f.write(content_ua)
+    print("✅ US and UA Field Manual Mocks Generated.")
+
+def link_user_articles():
+    print("⏳ Linking User's Articles directory...")
+    target = os.path.join(DATASETS_DIR, "UserArticles")
+    source = "/home/nickzt/Projects/TactOrder/Articles/"
+    if os.path.exists(source) and not os.path.exists(target):
+         try:
+             os.symlink(source, target)
+             print(f"✅ UserArticles linked to {target}")
+         except Exception as e:
+             print(f"⚠️ Could not symlink {source} -> {target}: {e}")
+    else:
+         print(f"✅ UserArticles target already setup or source doesn't exist.")
+
 if __name__ == "__main__":
     ensure_dirs()
     download_cuad()
@@ -139,4 +178,6 @@ if __name__ == "__main__":
     download_muc4()
     generate_laws()
     generate_fragos()
+    generate_field_manuals()
+    link_user_articles()
     print("\n🎉 All Datasets loaded into /home/nickzt/Projects/TactOrder/Datasets/")

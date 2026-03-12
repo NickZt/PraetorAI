@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
     implementation(project(":sharedUI"))
+    implementation("ch.qos.logback:logback-classic:1.5.8")
 }
 
 compose.desktop {

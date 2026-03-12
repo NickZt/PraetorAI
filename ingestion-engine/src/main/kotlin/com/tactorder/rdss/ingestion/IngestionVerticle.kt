@@ -9,6 +9,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
+import java.io.File
+import java.security.MessageDigest
 import java.time.Duration
 
 class IngestionVerticle : CoroutineVerticle() {
@@ -73,16 +75,31 @@ class IngestionVerticle : CoroutineVerticle() {
         llmExtractor: LLMExtractor,
         graphWriter: GraphWriter
     ) {
+        val file = File(filePath)
+        if (!file.exists()) {
+            logger.error("File does not exist: $filePath")
+            return
+        }
+
+        val fileBytes = file.readBytes()
+        val md5Hash = MessageDigest.getInstance("MD5").digest(fileBytes).joinToString("") { "%02x".format(it) }
+        val fileSize = file.length()
+
+        if (graphWriter.isDocumentIngested(md5Hash)) {
+            logger.warn("Document $filePath (MD5: $md5Hash) already ingested. Skipping deduplication.")
+            return
+        }
+
         // 1. Extract Text
         logger.info("Extracting content from $filePath")
         val extractedDoc = contentExtractor.extract(filePath)
 
         // 2. Initial Document Save
         val documentNode = Document(
-            title = extractedDoc.fileName, rawText = extractedDoc.content, uri = extractedDoc.filePath
+            title = extractedDoc.fileName, rawText = extractedDoc.content, uri = extractedDoc.filePath, md5Hash = md5Hash, fileSize = fileSize
         )
         graphWriter.saveEntities(listOf(documentNode))
-        logger.info("Saved base Document node: ${documentNode.title}")
+        logger.info("Saved base Document node: ${documentNode.title} with Hash: $md5Hash Size: $fileSize bytes")
 
         // 3. Semantic Chunking
         val chunks = semanticChunker.chunk(extractedDoc.content)

@@ -8,7 +8,9 @@ data class Document(
     @Id @GeneratedValue var id: Long? = null,
     var title: String,
     var rawText: String? = null,
-    var uri: String? = null
+    var uri: String? = null,
+    var md5Hash: String? = null,
+    var fileSize: Long? = null
 ) {
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
