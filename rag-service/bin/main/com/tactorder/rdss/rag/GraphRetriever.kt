@@ -7,24 +7,41 @@ import java.time.LocalDate
 
 class GraphRetriever(private val driver: Driver) {
 
-    fun retrieveContext(nodeIds: List<Long>, depth: Int = 2): List<JsonObject> {
+    fun retrieveContext(nodeIds: List<Long>, depth: Int = 2, queryDate: LocalDate? = null): List<JsonObject> {
         if (nodeIds.isEmpty()) return emptyList()
 
-        // Cypher to traverse 2 hops from start nodes
-        // Collects relationships and neighbor nodes
-        val cypher = """
+        val dateParam = queryDate?.toString()?.let { "${it}T00:00:00Z" }
+
+        // MNNLLama / Praetor AI SOP 3.1: Strict Native Temporal Graph queries
+        // If a date is provided, we filter out ActionNodes that violate the StartDate and EndDate bounds.
+        val cypher = if (dateParam != null) {
+            """
             MATCH (start) WHERE id(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
-                maxLevel: $depth,
+                maxLevel: ${'$'}depth,
+                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
+                labelFilter: '+Concept|+Law|+Section|+ActionNode'
+            })
+            YIELD nodes, relationships
+            WITH [n IN nodes WHERE NOT 'ActionNode' IN labels(n) OR 
+                 (n.StartDate <= datetime(${'$'}queryDate) AND (n.EndDate IS NULL OR n.EndDate > datetime(${'$'}queryDate)))] AS validNodes, relationships
+            RETURN validNodes as nodes, relationships
+            """
+        } else {
+             """
+            MATCH (start) WHERE id(start) IN ${'$'}ids
+            CALL apoc.path.subgraphAll(start, {
+                maxLevel: ${'$'}depth,
                 relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
                 labelFilter: '+Concept|+Law|+Section|+ActionNode'
             })
             YIELD nodes, relationships
             RETURN nodes, relationships
-        """
+            """
+        }
 
         return driver.session().use { session ->
-            val result = session.run(cypher, mapOf("ids" to nodeIds))
+            val result = session.run(cypher, mapOf("ids" to nodeIds, "depth" to depth, "queryDate" to dateParam))
             if (result.hasNext()) {
                 val record = result.next()
                 val nodes = record.get("nodes").asList { node ->
@@ -52,24 +69,7 @@ class GraphRetriever(private val driver: Driver) {
         }
     }
 
-    // SOP 3.1: Temporal filtering logic using ActionNode metadata
-    fun temporalFilter(graphData: List<JsonObject>, queryDate: LocalDate?): List<JsonObject> {
-        if (queryDate == null) return graphData
-
-        return graphData.filter { item ->
-            val props = item.getJsonObject("props") ?: return@filter true
-
-            // SOP 3.1 checks StartDate/EndDate
-            val validFromStr = props.getString("StartDate") ?: props.getString("validFrom")
-            val validToStr = props.getString("EndDate") ?: props.getString("validTo")
-
-            val validFrom = validFromStr?.substringBefore("T")?.let { LocalDate.parse(it) }
-            val validTo = validToStr?.substringBefore("T")?.let { LocalDate.parse(it) }
-
-            if (validFrom != null && queryDate.isBefore(validFrom)) return@filter false
-            if (validTo != null && queryDate.isAfter(validTo)) return@filter false
-
-            true
-        }
-    }
+    // Note: The Kotlin side temporalFilter() was completely removed 
+    // to strictly enforce the Praetor AI architectural rule that anachronisms
+    // must be eliminated at the Database layer, avoiding excessive JVM memory load.
 }

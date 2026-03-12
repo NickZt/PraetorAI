@@ -84,16 +84,13 @@ class RagVerticle : CoroutineVerticle() {
 
         if (nodeIds.isEmpty()) return "No relevant information found in the knowledge base."
 
-        // 2. Graph Traversal (2-hop)
-        val graphContext = graphRetriever.retrieveContext(nodeIds, depth = 2)
+        // 2. Graph Traversal (2-hop) with Native Temporal Filtering
+        val graphContext = graphRetriever.retrieveContext(nodeIds, depth = 2, queryDate = date)
 
-        // 3. Temporal Filtering
-        val filteredContext = graphRetriever.temporalFilter(graphContext, date)
+        // 3. Build Context
+        val contextText = contextBuilder.buildContext(graphContext)
 
-        // 4. Build Context
-        val contextText = contextBuilder.buildContext(filteredContext)
-
-        // 5. LLM Generation
+        // 4. LLM Generation
         val prompt = """
             You are an expert legal and military research assistant.
             Use the following context from the knowledge base to answer the user's question.
