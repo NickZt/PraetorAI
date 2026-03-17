@@ -18,8 +18,9 @@ build/
 
 # Data & Ingestion
 /data/
-/docs/
 /logs/
+# NOTE: /docs/ is intentionally NOT ignored here.
+# docs/ is committed to RDSS (private) and auto-stripped before PraetorAI sync via .privatepaths.
 /temp/
 *.log
 
