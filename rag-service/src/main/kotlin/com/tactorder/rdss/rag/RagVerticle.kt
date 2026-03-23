@@ -105,11 +105,13 @@ class RagVerticle : CoroutineVerticle() {
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
             .modelName(appConfig.getString("llm.chat.model", "native-Qwen3-VL-4B-Instruct-Eagle3-MNN"))
             .apiKey(apiKey)
-            .timeout(Duration.ofSeconds(config.getString("llm.timeout", "180").toLong()))
+            .timeout(Duration.ofSeconds(appConfig.getString("llm.timeout", "180").toLong()))
             .build()
 
         // 1. Vector Search
         val vectorResults = vectorSearch.search(query, limit = 5)
+        logger.info("Vector search results for query '$query': $vectorResults")
+        
         val nodeIds = vectorResults.map { it.getLong("id") }
 
         if (nodeIds.isEmpty()) return "No relevant information found in the knowledge base."
@@ -119,6 +121,7 @@ class RagVerticle : CoroutineVerticle() {
 
         // 3. Build Context
         val contextText = contextBuilder.buildContext(graphContext)
+        logger.info("RAG Context built for query '$query':\n$contextText")
 
         // 4. LLM Generation
         val prompt = """
@@ -128,6 +131,7 @@ class RagVerticle : CoroutineVerticle() {
             
             Question: $query
             
+            Context:
             $contextText
             
             Answer:

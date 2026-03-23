@@ -24,10 +24,10 @@ class ContextBuilder {
         nodes.forEach { node ->
             val labels = node.getJsonArray("labels").joinToString(", ")
             val props = node.getJsonObject("props")
-            val name = props.getString("title") ?: props.getString("name") ?: "Unknown"
-            val desc = props.getString("description") ?: props.getString("content")?.take(50) ?: "..."
+            val name = props.getString("title") ?: props.getString("name") ?: props.getString("text")?.take(20) ?: "Unknown"
+            val desc = props.getString("description") ?: props.getString("content") ?: props.getString("text") ?: "..."
 
-            stringBuilder.append("- [$labels] $name: $desc\n")
+            stringBuilder.append("- [$labels] $name: ${desc.take(200)}${if (desc.length > 200) "..." else ""}\n")
         }
 
         stringBuilder.append("\nRelationships:\n")

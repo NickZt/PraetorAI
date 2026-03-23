@@ -138,8 +138,8 @@ class IngestionVerticle : CoroutineVerticle() {
                     llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
                 }
 
-                // 5. Save to Graph (including Chunk and mapped entities)
-                val allEntities = mutableListOf<Any>(chunkNode)
+                // 5. Save to Graph (including Chunk, Document, and mapped entities)
+                val allEntities = mutableListOf<Any>(chunkNode, documentNode)
                 allEntities.addAll(entitiesToSave)
                 
                 graphWriter.saveEntities(allEntities)

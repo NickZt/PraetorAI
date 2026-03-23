@@ -19,8 +19,8 @@ class GraphRetriever(private val driver: Driver) {
             MATCH (start) WHERE id(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: ${'$'}depth,
-                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
-                labelFilter: '+Concept|+Law|+Section|+ActionNode'
+                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION|<HAS_CHUNK',
+                labelFilter: '+Concept|+Law|+Section|+ActionNode|+Document|+Chunk'
             })
             YIELD nodes, relationships
             WITH [n IN nodes WHERE NOT 'ActionNode' IN labels(n) OR 
@@ -45,18 +45,18 @@ class GraphRetriever(private val driver: Driver) {
             if (result.hasNext()) {
                 val record = result.next()
                 val nodes = record.get("nodes").asList { node ->
-                    val n = node as org.neo4j.driver.types.Node
+                    val n = node.asNode()
                     JsonObject()
-                        .put("id", n.elementId())
+                        .put("id", n.id())
                         .put("labels", JsonArray(n.labels().toList()))
                         .put("props", JsonObject(n.asMap()))
                 }
                 val rels = record.get("relationships").asList { rel ->
-                    val r = rel as org.neo4j.driver.types.Relationship
+                    val r = rel.asRelationship()
                     JsonObject()
                         .put("type", r.type())
-                        .put("start", r.startNodeElementId())
-                        .put("end", r.endNodeElementId())
+                        .put("start", r.startNodeId())
+                        .put("end", r.endNodeId())
                         .put("props", JsonObject(r.asMap()))
                 }
 
