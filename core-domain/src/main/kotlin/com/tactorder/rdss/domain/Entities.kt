@@ -14,6 +14,9 @@ data class Document(
 ) {
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
+
+    @Relationship(type = "HAS_CHUNK")
+    var chunks: MutableList<Chunk> = mutableListOf()
 }
 
 @NodeEntity
@@ -69,6 +72,14 @@ data class Person(
     @Id @GeneratedValue var id: Long? = null,
     var name: String,
     var role: String? = null
+)
+
+@NodeEntity
+data class Chunk(
+    @Id @GeneratedValue var id: Long? = null,
+    var text: String,
+    var embedding: DoubleArray? = null,
+    var index: Int = 0
 )
 
 @NodeEntity

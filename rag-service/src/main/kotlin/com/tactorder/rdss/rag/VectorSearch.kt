@@ -11,7 +11,7 @@ class VectorSearch(
 ) {
     private val logger = LoggerFactory.getLogger(VectorSearch::class.java)
     private val indexName = "document_embeddings"
-    private val dimension = 1024 // Qwen3 dimension
+    private val dimension = 2560 // Qwen3-4B dimension
 
     init {
         createIndexIfNotExists()
@@ -22,7 +22,7 @@ class VectorSearch(
         // Using Neo4j 5.x syntax
         val query = """
             CREATE VECTOR INDEX $indexName IF NOT EXISTS
-            FOR (d:Document) ON (d.embedding)
+            FOR (c:Chunk) ON (c.embedding)
             OPTIONS {indexConfig: {
              `vector.dimensions`: $dimension,
              `vector.similarity_function`: 'cosine'
@@ -44,16 +44,15 @@ class VectorSearch(
         val vectorList = embedding.vector().toList()
 
         val cypher = """
-            CALL db.index.vector.queryNodes($indexName, $limit, $vectorList)
+            CALL db.index.vector.queryNodes('$indexName', $limit, $vectorList)
             YIELD node, score
-            RETURN node.id AS id, node.title AS title, node.rawText AS text, score
+            RETURN ID(node) AS id, node.text AS text, score
         """
 
         return driver.session().use { session ->
             session.run(cypher).list().map { record ->
                 JsonObject()
                     .put("id", record.get("id").asLong())
-                    .put("title", record.get("title").asString())
                     .put("text", record.get("text").asString())
                     .put("score", record.get("score").asDouble())
             }

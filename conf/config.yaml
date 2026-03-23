@@ -9,7 +9,7 @@ mongodb.database: "rdss"
 llm.base-url: "http://localhost:8080/v1"
 llm.chat.model: "onnx-Qwen2.5-0.5B-Instruct-ONNX"
 llm.embedding.model: "native-Qwen3-Embedding-0.6B-MNN"
-llm.timeout: 60
+llm.timeout: 180
 
 extraction.mode: "llm"
 gliner.model: "gliner-bi-v2"

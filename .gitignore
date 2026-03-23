@@ -26,3 +26,4 @@ scripts/__pycache__/
 /tmp/rdss_test_*
 /gradle/wrapper/gradle-wrapper.jar
 /UI/Research-DSS/gradle/wrapper/gradle-wrapper.jar
+/.kotlin/

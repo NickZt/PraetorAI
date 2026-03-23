@@ -94,18 +94,18 @@ class RagVerticle : CoroutineVerticle() {
         val apiKey = appConfig.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local")
         val embeddingModel = OpenAiEmbeddingModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.embedding.model", "Qwen3-Embedding-4B-MNN"))
+            .modelName(appConfig.getString("llm.embedding.model", "native-Qwen3-Embedding-4B-MNN"))
             .apiKey(apiKey)
-            .timeout(Duration.ofSeconds(30))
+            .timeout(Duration.ofSeconds(appConfig.getString("llm.timeout", "180").toLong()))
             .build()
 
         vectorSearch = VectorSearch(neo4jDriver, embeddingModel)
 
         val chatModel = OpenAiChatModel.builder()
             .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.chat.model", "qwen2.5-7b"))
+            .modelName(appConfig.getString("llm.chat.model", "native-Qwen3-VL-4B-Instruct-Eagle3-MNN"))
             .apiKey(apiKey)
-            .timeout(Duration.ofSeconds(60))
+            .timeout(Duration.ofSeconds(config.getString("llm.timeout", "180").toLong()))
             .build()
 
         // 1. Vector Search

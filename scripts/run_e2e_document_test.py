@@ -62,9 +62,12 @@ def run_scenario_1_ingestion():
         else:
             print("   ⚠️ Person 'Jane Doe' not found in Graph yet (Check NER/GraphWriter logs)")
 
-        # Based on IngestionVerticle, it might create Document nodes
-        if validator.verify_node_exists("Document", {"title": os.path.basename(path_v1)}):
-            print("   ✅ Found Document node.")
+        import hashlib
+        with open(path_v1, "rb") as f:
+            md5_v1 = hashlib.md5(f.read()).hexdigest()
+        
+        if validator.verify_node_exists("Document", {"md5Hash": md5_v1}):
+            print("   ✅ Found Document node (verified via MD5).")
         else:
             print("   ⚠️ Document node not found in Graph")
             

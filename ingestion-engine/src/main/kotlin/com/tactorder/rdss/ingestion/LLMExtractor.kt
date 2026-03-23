@@ -12,14 +12,19 @@ import org.slf4j.LoggerFactory
 interface ExtractionService {
     @UserMessage(
         """
-        Analyze the following legal/military text and extract key entities and relationships.
-        Return a JSON object with the following structure:
+        Extract specific entities mentioned in the text (People, Laws, Concepts, Sections).
+        Return a JSON object with this structure:
         {
-            "concepts": ["concept1", "concept2"],
-            "laws": [{"number": "123", "title": "Law Title"}],
-            "sections": [{"number": "Art. 1", "content": "summary..."}],
-            "people": [{"name": "Name", "role": "Role"}]
+            "concepts": ["topic1", "topic2"],
+            "laws": [{"number": "law_001", "title": "Law Title", "type": "law_type"}],
+            "sections": [{"number": "sec_01", "content": "text_summary"}],
+            "people": [{"name": "person_name", "role": "person_role"}]
         }
+        
+        Strictly use the fields above but fill them with real data from the text. 
+        If an entity type is not present, return an empty list: [].
+        Do NOT return "person_name" or "law_001" unless they are actually in the text.
+        Return ONLY the JSON object.
         
         Text: {{text}}
     """

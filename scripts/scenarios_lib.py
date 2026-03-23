@@ -45,7 +45,12 @@ class AssistantClient:
             "query": query_text
         }
         response = requests.post(url, json=payload, timeout=30.0)
-        response.raise_for_status()
+        if response.status_code != 200:
+            try:
+                error_info = response.json()
+                raise Exception(f"HTTP {response.status_code}: {error_info.get('error', 'Unknown Error')}")
+            except:
+                response.raise_for_status()
         return response.json()
 
 class GraphValidator:
@@ -63,14 +68,26 @@ class GraphValidator:
             result = session.run(cypher, params or {})
             return [record.data() for record in result]
 
-    def verify_node_exists(self, label, properties, timeout=10):
-        start_time = time.time()
+    def verify_node_exists(self, label, properties, timeout=30):
         props_str = " AND ".join([f"n.{k} = ${k}" for k in properties.keys()])
         cypher = f"MATCH (n:{label}) WHERE {props_str} RETURN count(n) as count"
         
+        start_time = time.time()
         while time.time() - start_time < timeout:
             results = self.query(cypher, properties)
             if results and results[0]['count'] > 0:
                 return True
-            time.sleep(1)
+            time.sleep(2)
+        
+        # Debug info if not found
+        try:
+            print(f"      [Validator Debug]: Node {label} with {properties} not found.")
+            all_labels = self.query("MATCH (n) RETURN DISTINCT labels(n) as labels")
+            print(f"      [Validator Debug]: Available labels in DB: {all_labels}")
+            if label:
+                sample = self.query(f"MATCH (n:{label}) RETURN n LIMIT 1")
+                print(f"      [Validator Debug]: Sample {label} node: {sample}")
+        except Exception as e:
+            print(f"      [Validator Debug]: Error fetching debug info: {e}")
+            
         return False
