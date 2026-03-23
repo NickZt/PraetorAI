@@ -42,30 +42,35 @@ class GraphRetriever(private val driver: Driver) {
 
         return driver.session().use { session ->
             val result = session.run(cypher, mapOf("ids" to nodeIds, "depth" to depth, "queryDate" to dateParam))
-            if (result.hasNext()) {
+            val allData = mutableListOf<JsonObject>()
+            
+            while (result.hasNext()) {
                 val record = result.next()
-                val nodes = record.get("nodes").asList { node ->
-                    val n = node.asNode()
-                    JsonObject()
-                        .put("id", n.id())
-                        .put("labels", JsonArray(n.labels().toList()))
-                        .put("props", JsonObject(n.asMap()))
-                }
-                val rels = record.get("relationships").asList { rel ->
-                    val r = rel.asRelationship()
-                    JsonObject()
-                        .put("type", r.type())
-                        .put("start", r.startNodeId())
-                        .put("end", r.endNodeId())
-                        .put("props", JsonObject(r.asMap()))
+                val nodesList = record.get("nodes")
+                val relsList = record.get("relationships")
+
+                if (!nodesList.isNull && !nodesList.isEmpty) {
+                    allData.addAll(nodesList.asList { node ->
+                        val n = node.asNode()
+                        JsonObject()
+                            .put("id", n.id())
+                            .put("labels", JsonArray(n.labels().toList()))
+                            .put("props", JsonObject(n.asMap()))
+                    })
                 }
 
-                // Combine into a generic result structure
-                // or just return the subgraph list
-                nodes + rels
-            } else {
-                emptyList()
+                if (!relsList.isNull && !relsList.isEmpty) {
+                     allData.addAll(relsList.asList { rel ->
+                        val r = rel.asRelationship()
+                        JsonObject()
+                            .put("type", r.type())
+                            .put("start", r.startNodeId())
+                            .put("end", r.endNodeId())
+                            .put("props", JsonObject(r.asMap()))
+                    })
+                }
             }
+            allData
         }
     }
 

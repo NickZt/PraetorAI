@@ -71,7 +71,8 @@ data class Concept(
 data class Person(
     @Id @GeneratedValue var id: Long? = null,
     var name: String,
-    var role: String? = null
+    var role: String? = null,
+    var rank: String? = null
 )
 
 @NodeEntity

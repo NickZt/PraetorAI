@@ -44,7 +44,7 @@ class AssistantClient:
         payload = {
             "query": query_text
         }
-        response = requests.post(url, json=payload, timeout=30.0)
+        response = requests.post(url, json=payload, timeout=180.0)
         if response.status_code != 200:
             try:
                 error_info = response.json()

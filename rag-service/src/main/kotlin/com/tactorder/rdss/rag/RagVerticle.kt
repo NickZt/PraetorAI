@@ -110,7 +110,7 @@ class RagVerticle : CoroutineVerticle() {
 
         // 1. Vector Search
         val vectorResults = vectorSearch.search(query, limit = 5)
-        logger.info("Vector search results for query '$query': $vectorResults")
+      //  logger.info("TODEL Vector search results for query '$query': $vectorResults")
         
         val nodeIds = vectorResults.map { it.getLong("id") }
 
@@ -121,7 +121,7 @@ class RagVerticle : CoroutineVerticle() {
 
         // 3. Build Context
         val contextText = contextBuilder.buildContext(graphContext)
-        logger.info("RAG Context built for query '$query':\n$contextText")
+      //  logger.info("TODEL RAG Context built for query '$query':\n$contextText")
 
         // 4. LLM Generation
         val prompt = """
@@ -131,7 +131,6 @@ class RagVerticle : CoroutineVerticle() {
             
             Question: $query
             
-            Context:
             $contextText
             
             Answer:

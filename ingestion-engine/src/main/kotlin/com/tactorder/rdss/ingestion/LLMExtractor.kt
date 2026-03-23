@@ -13,12 +13,15 @@ interface ExtractionService {
     @UserMessage(
         """
         Extract specific entities mentioned in the text (People, Laws, Concepts, Sections).
+        For People, extract the proper name (e.g., "Jane Doe") into the "name" field, and any title or rank (e.g., "Commander", "Sergeant") into the "rank" field.
+        Put description of their role (e.g., "Authorized Officer") in the "role" field.
+
         Return a JSON object with this structure:
         {
             "concepts": ["topic1", "topic2"],
             "laws": [{"number": "law_001", "title": "Law Title", "type": "law_type"}],
             "sections": [{"number": "sec_01", "content": "text_summary"}],
-            "people": [{"name": "person_name", "role": "person_role"}]
+            "people": [{"name": "person_name", "role": "person_role", "rank": "person_rank"}]
         }
         
         Strictly use the fields above but fill them with real data from the text. 
@@ -95,7 +98,8 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                 rootNode.get("people").forEach { pNode ->
                     val person = Person(
                         name = pNode.get("name")?.asText() ?: "",
-                        role = pNode.get("role")?.asText()
+                        role = pNode.get("role")?.asText(),
+                        rank = pNode.get("rank")?.asText()
                     )
                     entities.add(person)
                 }

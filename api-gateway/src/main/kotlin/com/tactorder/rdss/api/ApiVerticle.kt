@@ -1,5 +1,6 @@
 package com.tactorder.rdss.api
 
+import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
@@ -58,7 +59,8 @@ class ApiVerticle : CoroutineVerticle() {
             // Request-Reply to RAG Service
             launch(vertx.dispatcher()) {
                 try {
-                    val result = vertx.eventBus().request<JsonObject>("rag.query", body).coAwait()
+                    val options = DeliveryOptions().setSendTimeout(180000)
+                    val result = vertx.eventBus().request<JsonObject>("rag.query", body, options).coAwait()
                     ctx.response()
                         .putHeader("Content-Type", "application/json")
                         .end(result.body().encode())

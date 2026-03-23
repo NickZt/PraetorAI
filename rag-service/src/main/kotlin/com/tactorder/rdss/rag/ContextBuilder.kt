@@ -27,7 +27,7 @@ class ContextBuilder {
             val name = props.getString("title") ?: props.getString("name") ?: props.getString("text")?.take(20) ?: "Unknown"
             val desc = props.getString("description") ?: props.getString("content") ?: props.getString("text") ?: "..."
 
-            stringBuilder.append("- [$labels] $name: ${desc.take(200)}${if (desc.length > 200) "..." else ""}\n")
+            stringBuilder.append("- [$labels] $name: ${desc.take(1000)}${if (desc.length > 1000) "..." else ""}\n")
         }
 
         stringBuilder.append("\nRelationships:\n")

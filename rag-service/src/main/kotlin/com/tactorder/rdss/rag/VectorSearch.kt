@@ -39,7 +39,7 @@ class VectorSearch(
         }
     }
 
-    fun search(query: String, limit: Int = 5): List<JsonObject> {
+    fun search(query: String, limit: Int = 5, minScore: Double = 0.75): List<JsonObject> {
         val embedding = embeddingModel.embed(query).content()
         val vectorList = embedding.vector().toList()
 
@@ -55,7 +55,7 @@ class VectorSearch(
                     .put("id", record.get("id").asLong())
                     .put("text", record.get("text").asString())
                     .put("score", record.get("score").asDouble())
-            }
+            }.filter { it.getDouble("score") >= minScore }
         }
     }
 }
