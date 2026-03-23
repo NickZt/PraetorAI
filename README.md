@@ -101,6 +101,18 @@ Run the unified launcher via Gradle. This starts the Ingestion Engine, RAG Servi
 ./gradlew :bootstrap:run
 ```
 
+### 4. Run End-to-End Tests
+
+After starting the application, you can run the automated E2E testing suite:
+
+```bash
+# Ensure you have the Python dependencies
+/home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python -m pip install requests neo4j
+
+# Run the test suite
+/home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python scripts/run_e2e_document_test.py
+```
+
 ## Documentation
 
 This project inherently maintains a "Memory Bank" for project status, architecture, and current goals. Refer to the

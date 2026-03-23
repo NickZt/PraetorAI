@@ -11,7 +11,7 @@ class VectorSearch(
 ) {
     private val logger = LoggerFactory.getLogger(VectorSearch::class.java)
     private val indexName = "document_embeddings"
-    private val dimension = 384 // AllMiniLmL6V2 dimension
+    private val dimension = 1024 // Qwen3 dimension
 
     init {
         createIndexIfNotExists()

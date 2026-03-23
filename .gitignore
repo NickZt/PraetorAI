@@ -1,58 +1,28 @@
 # Gradle
 .gradle/
 build/
-*/build/
+**/build/
 
-# IDE files
+# IDEs
 .idea/
-*.iml
-*.iws
-*.ipr
 .vscode/
+*.swp
+*.swo
 
-# Kotlin
-.kotlin/
+# Python
+__pycache__/
+.venv/
+.env
 
-# macOS
-.DS_Store
-
-# Data & Ingestion
-/data/
+# Data & Ingest
+/data/ingest/
+/data/neo4j/
+/data/mongo/
 /logs/
-# NOTE: /docs/ is intentionally NOT ignored here.
-# docs/ is committed to RDSS (private) and auto-stripped before PraetorAI sync via .privatepaths.
-/temp/
-*.log
 
-# Sensitive Files
-local.properties
-*.jks
-*.p12
-*.pem
-*.key
-*.gpg
-*.keystore
-
-# Node/Frontend (if applicable)
-node_modules/
-dist/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.eslintcache
-
-# Docker
-.docker/
-
-# Vert.x specific
-.vertx/
-file-uploads/
-
-# Output and Artifacts
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
-*.rar
-/.env
+# Test Artifacts
+scripts/*.log
+scripts/__pycache__/
+/tmp/rdss_test_*
+/gradle/wrapper/gradle-wrapper.jar
+/UI/Research-DSS/gradle/wrapper/gradle-wrapper.jar
