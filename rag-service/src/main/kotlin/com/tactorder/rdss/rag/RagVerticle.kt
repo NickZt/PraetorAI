@@ -4,6 +4,7 @@ package com.tactorder.rdss.rag
 import com.tactorder.rdss.config.ConfigLoader
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 import kotlinx.coroutines.launch
@@ -69,7 +70,20 @@ class RagVerticle : CoroutineVerticle() {
             }
         }
 
-        logger.info("RagVerticle started and listening on 'rag.query' and 'graph.stats'")
+        // EventBus Consumer for Graph Visualization
+        vertx.eventBus().consumer<JsonObject>("graph.visualize") { message ->
+            launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val graphData = graphRetriever.getWholeGraph()
+                    message.reply(JsonObject().put("data", JsonArray(graphData as List<*>)))
+                } catch (e: Exception) {
+                    logger.error("Graph visualization failed", e)
+                    message.fail(500, e.message)
+                }
+            }
+        }
+
+        logger.info("RagVerticle started and listening on 'rag.query', 'graph.stats' and 'graph.visualize'")
     }
 
     private suspend fun getGraphStatistics(): JsonObject {

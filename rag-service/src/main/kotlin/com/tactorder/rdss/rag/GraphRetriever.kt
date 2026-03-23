@@ -73,8 +73,43 @@ class GraphRetriever(private val driver: Driver) {
             allData
         }
     }
+    fun getWholeGraph(): List<JsonObject> {
+        val cypher = """
+            MATCH (n)
+            OPTIONAL MATCH (n)-[r]->(m)
+            RETURN collect(distinct n) as nodes, collect(distinct r) as relationships
+        """.trimIndent()
 
-    // Note: The Kotlin side temporalFilter() was completely removed 
-    // to strictly enforce the Praetor AI architectural rule that anachronisms
-    // must be eliminated at the Database layer, avoiding excessive JVM memory load.
+        return driver.session().use { session ->
+            val result = session.run(cypher)
+            val allData = mutableListOf<JsonObject>()
+            if (result.hasNext()) {
+                val record = result.next()
+                val nodesList = record.get("nodes")
+                val relsList = record.get("relationships")
+
+                if (!nodesList.isNull && !nodesList.isEmpty) {
+                    allData.addAll(nodesList.asList { node ->
+                        val n = node.asNode()
+                        JsonObject()
+                            .put("id", n.id())
+                            .put("labels", JsonArray(n.labels().toList()))
+                            .put("props", JsonObject(n.asMap()))
+                    })
+                }
+
+                if (!relsList.isNull && !relsList.isEmpty) {
+                    allData.addAll(relsList.asList { rel ->
+                        val r = rel.asRelationship()
+                        JsonObject()
+                            .put("type", r.type())
+                            .put("start", r.startNodeId())
+                            .put("end", r.endNodeId())
+                            .put("props", JsonObject(r.asMap()))
+                    })
+                }
+            }
+            allData
+        }
+    }
 }

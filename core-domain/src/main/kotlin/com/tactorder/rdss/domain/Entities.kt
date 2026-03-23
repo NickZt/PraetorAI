@@ -31,6 +31,9 @@ data class Law(
     @Relationship(type = "AMENDS")
     var amends: MutableSet<Amends> = mutableSetOf()
 
+    @Relationship(type = "SUPERSEDES")
+    var supersedes: MutableSet<Law> = mutableSetOf()
+
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
 

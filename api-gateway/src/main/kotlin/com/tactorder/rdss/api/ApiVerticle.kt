@@ -74,11 +74,26 @@ class ApiVerticle : CoroutineVerticle() {
             }
         }
 
-        // Graph Visualization Endpoint (Stub for now)
-        router.get("/graph/visualize").handler { ctx ->
-            // TODO: Fetch graph data from Neo4j directly or via service
-            ctx.response().end(JsonObject().put("nodes", listOf<Any>()).put("edges", listOf<Any>()).encode())
+        // Graph Visualization Endpoint
+        router.get("/graph/data").handler { ctx ->
+            launch(vertx.dispatcher()) {
+                try {
+                    val result = vertx.eventBus().request<JsonObject>("graph.visualize", JsonObject()).coAwait()
+                    ctx.response()
+                        .putHeader("Content-Type", "application/json")
+                        .end(result.body().encode())
+                } catch (e: Exception) {
+                    logger.error("Visualization query failed", e)
+                    ctx.response()
+                        .setStatusCode(500)
+                        .putHeader("Content-Type", "application/json")
+                        .end(JsonObject().put("error", e.message).encode())
+                }
+            }
         }
+
+        // Serve Static Dashboard
+        router.route("/*").handler(io.vertx.ext.web.handler.StaticHandler.create("webroot").setIndexPage("index.html"))
         
         // Graph Statistics Endpoint
         router.get("/stats").handler { ctx ->

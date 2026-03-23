@@ -63,16 +63,17 @@ Integration & Core Stack:
 - Earliest Deadline First (EDF) scheduler for CRITICAL priority event routing
 
 Inference Engine (MNNLLama):
-- Edge AI inference engine locally deployed
-- Alibaba MNN + ONNX runtime targeting ARM & Edge hardware
-- Single Active Model constraint for 2GB RAM edge devices
+- Edge AI inference engine locally deployed.
+- Alibaba MNN + ONNX runtime targeting ARM & Edge hardware.
+- Optimized for **4B-class models** to fit within 4-8GB RAM edge devices.
 
 AI Models & Metrics Guarantees:
-- LLM: `Qwen2.5-7B` / `native-Qwen3-Embedding`
-- Zero-Shot NER: `gliner-bi-base-v2.0` (bi-encoder architecture for $\mathcal{O}(1)$ edge speed)
-  - **Experiment 2 Guarantee:** Edge NER Scalability processing a pool of field contracts extracting up to 1,000 predefined classes on CPU retains $<6\%$ speed degradation vs 10 classes, while maintaining a Micro-F1 $>60\%$.
-- Graph Retrieval: LangChain4j Agent Temporal Querying.
-  - **Experiment 3 Guarantee:** Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries to return historical anachronism-free states.
+- **LLM**: `native-Qwen3-VL-4B-Instruct-Eagle3-MNN` (Instruction & Vision).
+- **Embedding**: `native-Qwen3-Embedding-4B-MNN` (2560 dimensions).
+- **Zero-Shot NER**: `gliner-bi-base-v2.0` (Native MNN implementation).
+  - **Rank Support**: Extract names (e.g., "Jane Doe") and ranks (e.g., "Commander") as distinct properties to prevent entity collision.
+- **Graph Retrieval**: LangChain4j + Cypher APOC Traversal.
+  - **Experiment 3 Guarantee**: Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries with 180s delivery timeouts for deep reasoning.
 
 ## How to Run
 
@@ -109,9 +110,18 @@ After starting the application, you can run the automated E2E testing suite:
 # Ensure you have the Python dependencies
 /home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python -m pip install requests neo4j
 
+```bash
 # Run the test suite
 /home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python scripts/run_e2e_document_test.py
 ```
+
+### 5. Graph Visualization Dashboard
+
+Praetor AI includes a built-in interactive knowledge graph dashboard powered by Cytoscape.js.
+
+- **Access**: `http://localhost:8081/index.html`
+- **Visuals**: Documents (Blue), Concepts (Purple), Chunks (Green), Personnel (Pink), Laws (Amber).
+- **Interactivity**: Real-time layout adjustment and metadata inspection.
 
 ## Documentation
 

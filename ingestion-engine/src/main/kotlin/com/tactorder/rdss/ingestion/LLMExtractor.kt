@@ -19,7 +19,7 @@ interface ExtractionService {
         Return a JSON object with this structure:
         {
             "concepts": ["topic1", "topic2"],
-            "laws": [{"number": "law_001", "title": "Law Title", "type": "law_type"}],
+            "laws": [{"number": "law_001", "title": "Law Title", "type": "law_type", "supersedes": "optional_number_of_law_it_replaces"}],
             "sections": [{"number": "sec_01", "content": "text_summary"}],
             "people": [{"name": "person_name", "role": "person_role", "rank": "person_rank"}]
         }
@@ -105,6 +105,16 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                 }
             }
 
+            // 5. Raw Supersedes Info (For post-processing)
+            if (rootNode.has("laws")) {
+               rootNode.get("laws").forEach { lawNode ->
+                   val supersedes = lawNode.get("supersedes")?.asText()
+                   if (supersedes != null && supersedes.isNotBlank()) {
+                       extracted.metadata["supersedes"] = supersedes
+                   }
+               }
+            }
+
         } catch (e: Exception) {
             logger.error("Failed to parse LLM JSON: ${extracted.rawJson}", e)
         }
@@ -114,6 +124,6 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
 }
 
 data class ExtractedEntities(
-    val rawJson: String
-    // In real impl, map to domain objects
+    val rawJson: String,
+    val metadata: MutableMap<String, String> = mutableMapOf()
 )
