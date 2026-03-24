@@ -1,24 +1,16 @@
 package com.tactorder.rdss.agent
 
-import dev.langchain4j.data.message.AiMessage
 import dev.langchain4j.data.message.ImageContent
 import dev.langchain4j.data.message.TextContent
 import dev.langchain4j.data.message.UserMessage
-import dev.langchain4j.model.chat.ChatLanguageModel
 import dev.langchain4j.model.openai.OpenAiChatModel
 import io.vertx.core.json.JsonObject
 import org.slf4j.LoggerFactory
-import java.time.Duration
 
 class VisionAgent(private val config: JsonObject) {
     private val logger = LoggerFactory.getLogger(VisionAgent::class.java)
 
-    private val llm: ChatLanguageModel = OpenAiChatModel.builder()
-        .baseUrl(config.getJsonObject("llm")?.getString("base-url") ?: "http://localhost:8080/v1")
-        .modelName(config.getJsonObject("llm")?.getJsonObject("chat")?.getString("model") ?: "native-Qwen3-VL-4B-Instruct-Eagle3-MNN")
-        .apiKey(config.getJsonObject("llm")?.getString("api.key") ?: System.getenv("LLM_API_KEY") ?: "sk-local")
-        .timeout(Duration.ofSeconds(config.getJsonObject("llm")?.getString("timeout")?.toLong() ?: 180L))
-        .build()
+    private val visionModel: OpenAiChatModel = com.tactorder.rdss.config.ModelFactory.createChatModel(config)
 
     /**
      * Performs OCR and Captioning on an image.
@@ -27,7 +19,7 @@ class VisionAgent(private val config: JsonObject) {
     fun analyzeImage(payload: JsonObject): JsonObject {
         val imagePath = payload.getString("image_path")
         val task = payload.getString("task", "caption")
-        
+
         logger.info("VisionAgent: Analyzing image $imagePath (Task: $task)")
 
         val prompt = when (task) {
@@ -49,7 +41,7 @@ class VisionAgent(private val config: JsonObject) {
                 ImageContent.from(base64Image, mimeType)
             )
 
-            val response = llm.generate(userMessage)
+            val response = visionModel.generate(userMessage)
             val text = response.content().text()
 
             return JsonObject()

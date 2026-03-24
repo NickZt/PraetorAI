@@ -9,7 +9,7 @@ NEO4J_PASSWORD = "password"
 
 def verify_vision_ingestion():
     # 1. Prepare Paths
-    ingest_dir = "/home/nickzt/Projects/TactOrder/RDSS/bootstrap/data/ingest"
+    ingest_dir = "/home/nickzt/Projects/TactOrder/RDSS/data/ingest"
     test_image = "/home/nickzt/Projects/TactOrder/RDSS/test_suite/test_vision.png"
     target_path = os.path.join(ingest_dir, "test_vision.png")
     
