@@ -14,6 +14,15 @@ data class Document(
 ) {
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
+
+    @Relationship(type = "HAS_CHUNK")
+    var chunks: MutableList<Chunk> = mutableListOf()
+
+    @Relationship(type = "HAS_LAW")
+    var laws: MutableSet<Law> = mutableSetOf()
+
+    @Relationship(type = "HAS_PERSON")
+    var people: MutableSet<Person> = mutableSetOf()
 }
 
 @NodeEntity
@@ -27,6 +36,9 @@ data class Law(
 ) {
     @Relationship(type = "AMENDS")
     var amends: MutableSet<Amends> = mutableSetOf()
+
+    @Relationship(type = "SUPERSEDES")
+    var supersedes: MutableSet<Law> = mutableSetOf()
 
     @Relationship(type = "MENTIONS")
     var concepts: MutableSet<Concept> = mutableSetOf()
@@ -68,7 +80,16 @@ data class Concept(
 data class Person(
     @Id @GeneratedValue var id: Long? = null,
     var name: String,
-    var role: String? = null
+    var role: String? = null,
+    var rank: String? = null
+)
+
+@NodeEntity
+data class Chunk(
+    @Id @GeneratedValue var id: Long? = null,
+    var text: String,
+    var embedding: DoubleArray? = null,
+    var index: Int = 0
 )
 
 @NodeEntity
@@ -76,3 +97,28 @@ data class DateNode(
     @Id @GeneratedValue var id: Long? = null,
     var date: LocalDate
 )
+
+@NodeEntity
+data class Image(
+    @Id @GeneratedValue var id: Long? = null,
+    var name: String,
+    var uri: String,
+    var description: String? = null,
+    var ocrText: String? = null,
+    var md5Hash: String? = null
+) {
+    @Relationship(type = "MENTIONS")
+    var concepts: MutableSet<Concept> = mutableSetOf()
+}
+
+@NodeEntity
+data class Audio(
+    @Id @GeneratedValue var id: Long? = null,
+    var name: String,
+    var uri: String,
+    var transcript: String? = null,
+    var md5Hash: String? = null
+) {
+    @Relationship(type = "MENTIONS")
+    var concepts: MutableSet<Concept> = mutableSetOf()
+}

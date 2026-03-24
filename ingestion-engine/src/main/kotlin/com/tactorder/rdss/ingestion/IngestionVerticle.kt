@@ -1,17 +1,22 @@
 package com.tactorder.rdss.ingestion
 
 import com.tactorder.rdss.config.ConfigLoader
+import com.tactorder.rdss.config.ModelFactory
+import com.tactorder.rdss.domain.Audio
+import com.tactorder.rdss.domain.Chunk
 import com.tactorder.rdss.domain.Document
-import dev.langchain4j.model.openai.OpenAiChatModel
+import com.tactorder.rdss.domain.Image
+import dev.langchain4j.model.openai.OpenAiEmbeddingModel
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
+import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.security.MessageDigest
-import java.time.Duration
 
 class IngestionVerticle : CoroutineVerticle() {
 
@@ -29,20 +34,16 @@ class IngestionVerticle : CoroutineVerticle() {
         val contentExtractor = ContentExtractor()
         val graphWriter = GraphWriter(config)
         val semanticChunker = SemanticChunker(
-            chunkSize = config.getInteger("ingestion.chunk-size", 1000),
-            overlap = config.getInteger("ingestion.chunk-overlap", 200)
+            chunkSize = config.getJsonObject("ingestion")?.getInteger("chunk-size") ?: 1000,
+            overlap = config.getJsonObject("ingestion")?.getInteger("chunk-overlap") ?: 200
         )
 
-        // Setup Chat Model for LLMExtractor
-        val chatModel = OpenAiChatModel.builder().baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(config.getString("llm.chat.model", "onnx-Qwen2.5-0.5B-Instruct-ONNX"))
-            .apiKey(config.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local"))
-            .timeout(Duration.ofSeconds(60)).build()
+        val chatModel = ModelFactory.createChatModel(config)
+        val embeddingModel = ModelFactory.createEmbeddingModel(config)
 
         val llmExtractor = LLMExtractor(chatModel)
         val glinerExtractor = GlinerExtractor(vertx, config)
-
-        val extractionMode = config.getString("extraction.mode", System.getenv("EXTRACTION_MODE") ?: "llm")
+        val extractionMode = config.getJsonObject("extraction")?.getString("mode") ?: "llm"
 
         // Start FileWatcher
         val fileWatcher = FileWatcher(vertx, config)
@@ -50,19 +51,33 @@ class IngestionVerticle : CoroutineVerticle() {
 
         val ingestionMutex = Mutex()
 
-        // Setup EventBus Listener for New Files
+        // Setup EventBus Listener for New Files (Multi-Modal Dispatcher)
         vertx.eventBus().consumer<String>("ingestion.new_file") { message ->
             val filePath = message.body()
-            logger.info("Received new file event for: $filePath")
+            val extension = File(filePath).extension.lowercase()
+            logger.info("Received new file event for: $filePath (Type: $extension)")
 
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     ingestionMutex.withLock {
-                        processFile(filePath, contentExtractor, semanticChunker, llmExtractor, glinerExtractor, graphWriter, extractionMode)
+                        when (extension) {
+                            "jpg", "jpeg", "png" -> processImageFile(filePath, graphWriter)
+                            "mp3", "wav" -> processAudioFile(filePath, graphWriter)
+                            else -> processTextFile(
+                                filePath,
+                                contentExtractor,
+                                semanticChunker,
+                                llmExtractor,
+                                glinerExtractor,
+                                graphWriter,
+                                embeddingModel,
+                                extractionMode
+                            )
+                        }
                     }
                     message.reply(JsonObject().put("status", "success"))
                 } catch (e: Exception) {
-                    logger.error("Failed to process file: $filePath", e)
+                    logger.error("Failed to process multi-modal file: $filePath", e)
                     message.fail(500, e.message)
                 }
             }
@@ -71,70 +86,137 @@ class IngestionVerticle : CoroutineVerticle() {
         logger.info("IngestionVerticle started successfully.")
     }
 
-    private suspend fun processFile(
+
+    private fun getMd5Hash(file: File): String {
+        return MessageDigest.getInstance("MD5").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun checkDeduplication(md5Hash: String, graphWriter: GraphWriter): Boolean {
+        if (graphWriter.isDocumentIngested(md5Hash)) {
+            logger.warn("Content with MD5: $md5Hash already ingested. Skipping.")
+            return true
+        }
+        return false
+    }
+
+    private suspend fun requestAgent(task: String, payload: JsonObject): JsonObject {
+        val request = JsonObject().put("task", task).put("payload", payload)
+        return try {
+            vertx.eventBus().request<JsonObject>(
+                "agent.orchestrate",
+                request,
+                io.vertx.core.eventbus.DeliveryOptions().setSendTimeout(180000)
+            ).coAwait().body()
+        } catch (e: Exception) {
+            logger.error("Agent request failed: $task", e)
+            JsonObject().put("status", "error").put("message", e.message)
+        }
+    }
+
+    private suspend fun processTextFile(
         filePath: String,
         contentExtractor: ContentExtractor,
         semanticChunker: SemanticChunker,
         llmExtractor: LLMExtractor,
         glinerExtractor: GlinerExtractor,
         graphWriter: GraphWriter,
+        embeddingModel: OpenAiEmbeddingModel,
         extractionMode: String
     ) {
         val file = File(filePath)
-        if (!file.exists()) {
-            logger.error("File does not exist: $filePath")
-            return
-        }
+        val md5Hash = getMd5Hash(file)
+        if (checkDeduplication(md5Hash, graphWriter)) return
 
-        val fileBytes = file.readBytes()
-        val md5Hash = MessageDigest.getInstance("MD5").digest(fileBytes).joinToString("") { "%02x".format(it) }
         val fileSize = file.length()
-
-        if (graphWriter.isDocumentIngested(md5Hash)) {
-            logger.warn("Document $filePath (MD5: $md5Hash) already ingested. Skipping deduplication.")
-            return
-        }
-
-        // 1. Extract Text
+        // ... (remaining extraction logic is the same)
         logger.info("Extracting content from $filePath")
         val extractedDoc = contentExtractor.extract(filePath)
 
-        // 2. Initial Document Save
         val documentNode = Document(
-            title = extractedDoc.fileName, rawText = extractedDoc.content, uri = extractedDoc.filePath, md5Hash = md5Hash, fileSize = fileSize
+            title = extractedDoc.fileName,
+            rawText = extractedDoc.content,
+            uri = extractedDoc.filePath,
+            md5Hash = md5Hash,
+            fileSize = fileSize
         )
         graphWriter.saveEntities(listOf(documentNode))
-        logger.info("Saved base Document node: ${documentNode.title} with Hash: $md5Hash Size: $fileSize bytes")
 
-        // 3. Semantic Chunking
         val chunks = semanticChunker.chunk(extractedDoc.content)
-        logger.info("Document chunked into ${chunks.size} parts.")
-
-        // 4. LLM Extraction & Mapping
-        for ((index, chunk) in chunks.withIndex()) {
-            logger.info("Processing chunk ${index + 1}/${chunks.size} through LLMExtractor")
+        for ((index, chunkText) in chunks.withIndex()) {
             try {
-                val mappedEntities = if (extractionMode == "gliner") {
-                    logger.info("Extracting chunk through GLiNER Bi-Encoder...")
-                    glinerExtractor.extractAndMap(chunk, documentNode)
+                val vector = embeddingModel.embed(chunkText).content().vector().map { it.toDouble() }.toDoubleArray()
+                val chunkNode = Chunk(text = chunkText, embedding = vector, index = index)
+
+                val entitiesToSave = if (extractionMode == "gliner") {
+                    glinerExtractor.extractAndMap(chunkText, documentNode)
                 } else {
-                    logger.info("Extracting chunk through LLM Qwen Chat...")
-                    val extractedEntities = llmExtractor.extract(chunk)
-                    llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                    val extractedEntities = llmExtractor.extract(chunkText)
+                    val mapped = llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                    val mappedList = mapped.toMutableList()
+
+                    val curatorResponse = requestAgent(
+                        "curate",
+                        JsonObject().put("entities", JsonArray(mappedList.map { JsonObject.mapFrom(it) }))
+                    )
+                    logger.info("Curator status: ${curatorResponse.getString("status", "processed")}")
+
+                    mappedList
                 }
 
-                // 5. Save to Graph
-                if (mappedEntities.isNotEmpty()) {
-                    graphWriter.saveEntities(mappedEntities)
-                    logger.info("Saved ${mappedEntities.size} mapped entities from chunk ${index + 1} to Graph.")
-                }
+                val allEntities = mutableListOf<Any>(chunkNode, documentNode)
+                allEntities.addAll(entitiesToSave)
+                graphWriter.saveEntities(allEntities)
             } catch (e: Exception) {
                 logger.error("Error processing chunk $index", e)
             }
         }
-
-        // Final update to save relations on the document itself
         graphWriter.saveEntities(listOf(documentNode))
-        logger.info("Finished processing $filePath")
+
+        // Audit
+        requestAgent(
+            "audit",
+            JsonObject().put("new_directive", JsonObject().put("id", documentNode.id).put("title", documentNode.title))
+                .put("context", JsonObject())
+        )
+    }
+
+    private suspend fun processImageFile(filePath: String, graphWriter: GraphWriter) {
+        val file = File(filePath)
+        val md5Hash = getMd5Hash(file)
+        if (checkDeduplication(md5Hash, graphWriter)) return
+
+        logger.info("Processing Image: $filePath")
+
+        val captionResponse = requestAgent("vision", JsonObject().put("image_path", filePath).put("task", "caption"))
+        val ocrResponse = requestAgent("vision", JsonObject().put("image_path", filePath).put("task", "ocr"))
+
+        val imageNode = Image(
+            name = file.name,
+            uri = filePath,
+            description = captionResponse.getString("analysis", "No caption."),
+            ocrText = ocrResponse.getString("analysis", ""),
+            md5Hash = md5Hash
+        )
+        graphWriter.saveEntities(listOf(imageNode))
+        logger.info("Saved Image node: ${imageNode.name}")
+    }
+
+    private suspend fun processAudioFile(filePath: String, graphWriter: GraphWriter) {
+        val file = File(filePath)
+        val md5Hash = getMd5Hash(file)
+        if (checkDeduplication(md5Hash, graphWriter)) return
+
+        logger.info("Processing Audio: $filePath")
+
+        val audioResponse = requestAgent("audio", JsonObject().put("audio_path", filePath))
+
+        val audioNode = Audio(
+            name = file.name,
+            uri = filePath,
+            transcript = audioResponse.getString("transcript", "No transcript."),
+            md5Hash = md5Hash
+        )
+        graphWriter.saveEntities(listOf(audioNode))
+        logger.info("Saved Audio node: ${audioNode.name}")
     }
 }

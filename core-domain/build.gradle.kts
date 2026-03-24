@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.neo4j.driver)
     implementation(libs.jackson.module.kotlin)
     api(libs.langchain4j.core) // Expose LangChain types
+    implementation(libs.langchain4j.open.ai)
 
     // Config Loader Dependencies
     implementation("io.vertx:vertx-core:4.5.8")

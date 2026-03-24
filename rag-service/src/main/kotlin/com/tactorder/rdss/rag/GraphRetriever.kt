@@ -7,7 +7,7 @@ import java.time.LocalDate
 
 class GraphRetriever(private val driver: Driver) {
 
-    fun retrieveContext(nodeIds: List<Long>, depth: Int = 2, queryDate: LocalDate? = null): List<JsonObject> {
+    fun retrieveContext(nodeIds: List<String>, depth: Int = 2, queryDate: LocalDate? = null): List<JsonObject> {
         if (nodeIds.isEmpty()) return emptyList()
 
         val dateParam = queryDate?.toString()?.let { "${it}T00:00:00Z" }
@@ -16,11 +16,11 @@ class GraphRetriever(private val driver: Driver) {
         // If a date is provided, we filter out ActionNodes that violate the StartDate and EndDate bounds.
         val cypher = if (dateParam != null) {
             """
-            MATCH (start) WHERE id(start) IN ${'$'}ids
+            MATCH (start) WHERE elementId(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: ${'$'}depth,
-                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
-                labelFilter: '+Concept|+Law|+Section|+ActionNode'
+                relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION|<HAS_CHUNK',
+                labelFilter: '+Concept|+Law|+Section|+ActionNode|+Document|+Chunk'
             })
             YIELD nodes, relationships
             WITH [n IN nodes WHERE NOT 'ActionNode' IN labels(n) OR 
@@ -29,7 +29,7 @@ class GraphRetriever(private val driver: Driver) {
             """
         } else {
              """
-            MATCH (start) WHERE id(start) IN ${'$'}ids
+            MATCH (start) WHERE elementId(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: ${'$'}depth,
                 relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',
@@ -42,34 +42,74 @@ class GraphRetriever(private val driver: Driver) {
 
         return driver.session().use { session ->
             val result = session.run(cypher, mapOf("ids" to nodeIds, "depth" to depth, "queryDate" to dateParam))
-            if (result.hasNext()) {
+            val allData = mutableListOf<JsonObject>()
+            
+            while (result.hasNext()) {
                 val record = result.next()
-                val nodes = record.get("nodes").asList { node ->
-                    val n = node as org.neo4j.driver.types.Node
-                    JsonObject()
-                        .put("id", n.elementId())
-                        .put("labels", JsonArray(n.labels().toList()))
-                        .put("props", JsonObject(n.asMap()))
-                }
-                val rels = record.get("relationships").asList { rel ->
-                    val r = rel as org.neo4j.driver.types.Relationship
-                    JsonObject()
-                        .put("type", r.type())
-                        .put("start", r.startNodeElementId())
-                        .put("end", r.endNodeElementId())
-                        .put("props", JsonObject(r.asMap()))
+                val nodesList = record.get("nodes")
+                val relsList = record.get("relationships")
+
+                if (!nodesList.isNull && !nodesList.isEmpty) {
+                    allData.addAll(nodesList.asList { node ->
+                        val n = node.asNode()
+                        JsonObject()
+                            .put("id", n.id())
+                            .put("labels", JsonArray(n.labels().toList()))
+                            .put("props", JsonObject(n.asMap()))
+                    })
                 }
 
-                // Combine into a generic result structure
-                // or just return the subgraph list
-                nodes + rels
-            } else {
-                emptyList()
+                if (!relsList.isNull && !relsList.isEmpty) {
+                     allData.addAll(relsList.asList { rel ->
+                        val r = rel.asRelationship()
+                        JsonObject()
+                            .put("type", r.type())
+                            .put("start", r.startNodeId())
+                            .put("end", r.endNodeId())
+                            .put("props", JsonObject(r.asMap()))
+                    })
+                }
             }
+            allData
         }
     }
+    fun getWholeGraph(): List<JsonObject> {
+        val cypher = """
+            MATCH (n)
+            OPTIONAL MATCH (n)-[r]->(m)
+            RETURN collect(distinct n) as nodes, collect(distinct r) as relationships
+        """.trimIndent()
 
-    // Note: The Kotlin side temporalFilter() was completely removed 
-    // to strictly enforce the Praetor AI architectural rule that anachronisms
-    // must be eliminated at the Database layer, avoiding excessive JVM memory load.
+        return driver.session().use { session ->
+            val result = session.run(cypher)
+            val allData = mutableListOf<JsonObject>()
+            if (result.hasNext()) {
+                val record = result.next()
+                val nodesList = record.get("nodes")
+                val relsList = record.get("relationships")
+
+                if (!nodesList.isNull && !nodesList.isEmpty) {
+                    allData.addAll(nodesList.asList { node ->
+                        val n = node.asNode()
+                        JsonObject()
+                            .put("id", n.id())
+                            .put("labels", JsonArray(n.labels().toList()))
+                            .put("props", JsonObject(n.asMap()))
+                    })
+                }
+
+                if (!relsList.isNull && !relsList.isEmpty) {
+                    allData.addAll(relsList.asList { rel ->
+                        val r = rel.asRelationship()
+                        JsonObject()
+                            .put("type", r.type())
+                            .put("start", r.startNodeId())
+                            .put("end", r.endNodeId())
+                            .put("props", JsonObject(r.asMap()))
+                    })
+                }
+            }
+            allData
+        }
+    }
 }

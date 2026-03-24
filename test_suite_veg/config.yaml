@@ -1,10 +1,10 @@
-# RDSS Integration Config (Private/Tactical)
+# RDSS Vegetarian Mode Configuration (Public/Sanitized)
 neo4j:
   uri: "bolt://localhost:7687"
   username: "neo4j"
   password: "password"
 ingestion:
-  path: "/home/nickzt/Projects/TactOrder/RDSS/data/ingest"
+  path: "data/ingest_veg"
   chunk-size: 1000
   chunk-overlap: 200
 extraction:

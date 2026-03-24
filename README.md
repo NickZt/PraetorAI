@@ -63,16 +63,18 @@ Integration & Core Stack:
 - Earliest Deadline First (EDF) scheduler for CRITICAL priority event routing
 
 Inference Engine (MNNLLama):
-- Edge AI inference engine locally deployed
-- Alibaba MNN + ONNX runtime targeting ARM & Edge hardware
-- Single Active Model constraint for 2GB RAM edge devices
+- Edge AI inference engine locally deployed.
+- Alibaba MNN + ONNX runtime targeting ARM & Edge hardware.
+- Optimized for **4B-class models** to fit within 4-8GB RAM edge devices.
 
 AI Models & Metrics Guarantees:
-- LLM: `Qwen2.5-7B` / `native-Qwen3-Embedding`
-- Zero-Shot NER: `gliner-bi-base-v2.0` (bi-encoder architecture for $\mathcal{O}(1)$ edge speed)
-  - **Experiment 2 Guarantee:** Edge NER Scalability processing a pool of field contracts extracting up to 1,000 predefined classes on CPU retains $<6\%$ speed degradation vs 10 classes, while maintaining a Micro-F1 $>60\%$.
-- Graph Retrieval: LangChain4j Agent Temporal Querying.
-  - **Experiment 3 Guarantee:** Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries to return historical anachronism-free states.
+- **LLM**: `native-Qwen3-VL-4B-Instruct-Eagle3-MNN` (Instruction & Vision).
+- **Embedding**: `native-Qwen3-Embedding-4B-MNN` (2560 dimensions).
+- **Zero-Shot NER**: `gliner-bi-base-v2.0` (Native MNN implementation).
+  - **Rank Support**: Extract names (e.g., "Jane Doe") and ranks (e.g., "Commander") as distinct properties to prevent entity collision.
+- **Graph Retrieval**: LangChain4j + Cypher APOC Traversal.
+  - **Tunable Density**: Search limits, retrieval depth, and chunking parameters are fully configurable via `config.yaml`.
+  - **Temporal Integrity**: Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries.
 
 ## How to Run
 
@@ -100,6 +102,34 @@ Run the unified launcher via Gradle. This starts the Ingestion Engine, RAG Servi
 ```bash
 ./gradlew :bootstrap:run
 ```
+
+### 4. Run End-to-End Tests
+
+Praetor AI maintains dual test suites for standard and sanitized verification:
+
+```bash
+# Ensure you have the Python dependencies
+pip install requests neo4j
+
+# 1. Run Internal Tactical Tests (Requires test_suite/config.yaml)
+python3 test_suite/run_e2e_document_test.py
+
+# 2. Run Sanitized "Vegetarian" Tests (Requires test_suite_veg/config.yaml)
+python3 test_suite_veg/run_e2e_veg_test.py
+```
+
+### 5. Sanitized "Vegetarian" Infrastructure
+For open-source safety, use the **Vegetarian Infrastructure**. Isolation is handled via suite-specific configurations located in `test_suite_veg/`. To run in "Veg" mode, simply copy the veg config to `conf/config.yaml` before starting the application. 
+
+Refer to [Development Workflow](docs/development_workflow.md) for detailed isolation protocols.
+
+### 6. Graph Visualization Dashboard
+
+Praetor AI includes a built-in interactive knowledge graph dashboard powered by Cytoscape.js.
+
+- **Access**: `http://localhost:8081/index.html`
+- **Visuals**: Documents (Blue), Concepts (Purple), Chunks (Green), Personnel (Pink), Laws (Amber).
+- **Interactivity**: Real-time layout adjustment and metadata inspection.
 
 ## Documentation
 

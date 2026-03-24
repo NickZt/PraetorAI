@@ -1,0 +1,11 @@
+# Paths stripped from RDSS before pushing to PraetorAI (public).
+# Add one entry per line. Supports git-filter-repo path format:
+#   plain text  → exact path match (directory or file)
+#   glob:       → glob pattern
+#   regex:      → regex pattern
+#
+# All paths are stripped RECURSIVELY from the public sync.
+# This file itself is also excluded (see sync_opensource.sh).
+
+docs/
+scripts/sync_opensource.sh

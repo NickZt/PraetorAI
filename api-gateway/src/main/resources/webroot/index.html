@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Praetor AI Graph Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #f8fafc; margin: 0; overflow: hidden; }
+        #cy { width: 100vw; height: 100vh; display: block; }
+        .header { position: absolute; top: 20px; left: 20px; z-index: 10; background: rgba(30, 41, 59, 0.8); padding: 15px 25px; border-radius: 12px; backdrop-filter: blur(8px); border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        h1 { margin: 0; font-size: 1.25rem; color: #38bdf8; letter-spacing: -0.025em; }
+        .controls { position: absolute; bottom: 20px; left: 20px; z-index: 10; background: rgba(30, 41, 59, 0.8); padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+        button { background: #38bdf8; color: #0f172a; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Praetor AI Knowledge Graph</h1>
+        <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">Semantic Intel Analysis & Traceability</div>
+    </div>
+    <div class="controls">
+        <button onclick="cy.layout({ name: 'cose', animate: true }).run()">Re-Layout (COSE)</button>
+        <button onclick="cy.fit()">Fit View</button>
+    </div>
+    <div id="cy"></div>
+
+    <script>
+        async function fetchGraphData() {
+            try {
+                const response = await fetch('/graph/data');
+                const result = await response.json();
+                const rawData = result.data;
+
+                const elements = [];
+                const nodes = rawData.filter(item => item.labels);
+                const edges = rawData.filter(item => item.type);
+
+                nodes.forEach(n => {
+                    const label = n.labels[0] || 'Node';
+                    const name = n.props.title || n.props.name || n.props.text?.substring(0, 30) || 'Unknown';
+                    elements.push({
+                        data: { 
+                            id: n.id.toString(), 
+                            label: `${label}: ${name}`,
+                            type: label
+                        }
+                    });
+                });
+
+                edges.forEach(e => {
+                    elements.push({
+                        data: {
+                            id: `e${e.start}-${e.end}`,
+                            source: e.start.toString(),
+                            target: e.end.toString(),
+                            label: e.type
+                        }
+                    });
+                });
+
+                return elements;
+            } catch (err) {
+                console.error('Failed to fetch graph data:', err);
+                return [];
+            }
+        }
+
+        async function initGraph() {
+            const elements = await fetchGraphData();
+            
+            window.cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'color': '#f8fafc',
+                            'font-size': '10px',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'background-color': '#334155',
+                            'width': '60px',
+                            'height': '60px',
+                            'text-wrap': 'wrap',
+                            'text-max-width': '50px'
+                        }
+                    },
+                    { selector: 'node[type="Document"]', style: { 'background-color': '#0ea5e9' } },
+                    { selector: 'node[type="Concept"]', style: { 'background-color': '#8b5cf6' } },
+                    { selector: 'node[type="Chunk"]', style: { 'background-color': '#10b981', 'width': '30px', 'height': '30px' } },
+                    { selector: 'node[type="Law"]', style: { 'background-color': '#f59e0b' } },
+                    { selector: 'node[type="Person"]', style: { 'background-color': '#ec4899' } },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2,
+                            'line-color': '#475569',
+                            'target-arrow-color': '#475569',
+                            'target-arrow-shape': 'triangle',
+                            'curve-style': 'bezier',
+                            'label': 'data(label)',
+                            'font-size': '8px',
+                            'color': '#94a3b8',
+                            'edge-text-rotation': 'autorotate'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    padding: 50,
+                    animate: true
+                }
+            });
+        }
+
+        initGraph();
+    </script>
+</body>
+</html>

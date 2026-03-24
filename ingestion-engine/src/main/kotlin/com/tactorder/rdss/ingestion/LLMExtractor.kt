@@ -12,14 +12,28 @@ import org.slf4j.LoggerFactory
 interface ExtractionService {
     @UserMessage(
         """
-        Analyze the following legal/military text and extract key entities and relationships.
-        Return a JSON object with the following structure:
+        Extract specific entities mentioned in the text:
+        1. **Laws/Directives**: ID number (e.g. "104-A") and title.
+        2. **Supersession**: Identify if this document REPLACES or SUPERSEDES another (e.g. "supersedes 104-A").
+        3. **People**: Full name AND rank/title (e.g. "Commander", "Sergeant") as separate fields.
+        4. **Concepts & Sections**: Key topics and numbered paragraphs.
+
+        CRITICAL for 104-B: The text says "This supersedes Directive 104-A". You MUST extract "104-A" as the "supersedes" value.
+
+        JSON structure:
         {
-            "concepts": ["concept1", "concept2"],
-            "laws": [{"number": "123", "title": "Law Title"}],
-            "sections": [{"number": "Art. 1", "content": "summary..."}],
-            "people": [{"name": "Name", "role": "Role"}]
+            "concepts": ["topic1"],
+            "laws": [{"number": "104-B", "title": "...", "type": "directive", "supersedes": "104-A"}],
+            "sections": [{"number": "sec_01", "content": "..."}],
+            "people": [{"name": "Jane Doe", "rank": "Commander", "role": "Authorized Officer"}]
         }
+
+        Return ONLY the JSON object.
+        
+        Strictly use the fields above but fill them with real data from the text. 
+        If an entity type is not present, return an empty list: [].
+        Do NOT return "person_name" or "law_001" unless they are actually in the text.
+        Return ONLY the JSON object.
         
         Text: {{text}}
     """
@@ -44,6 +58,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
         try {
             // Read raw JSON returned by Gateway which might contain markdown formatting
             var rawJson = extracted.rawJson.trim()
+            logger.info("LLM Raw Extraction JSON: $rawJson")
             if (rawJson.startsWith("```json")) {
                 rawJson = rawJson.removePrefix("```json").removeSuffix("```").trim()
             }
@@ -70,6 +85,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                         title = lawNode.get("title")?.asText() ?: "Unknown Title"
                     )
                     parentDocument.concepts.forEach { law.concepts.add(it) } // Inherit concepts
+                    parentDocument.laws.add(law) // Link to Document
                     entities.add(law)
                 }
             }
@@ -90,10 +106,22 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                 rootNode.get("people").forEach { pNode ->
                     val person = Person(
                         name = pNode.get("name")?.asText() ?: "",
-                        role = pNode.get("role")?.asText()
+                        role = pNode.get("role")?.asText(),
+                        rank = pNode.get("rank")?.asText()
                     )
+                    parentDocument.people.add(person) // Link to Document
                     entities.add(person)
                 }
+            }
+
+            // 5. Raw Supersedes Info (For post-processing)
+            if (rootNode.has("laws")) {
+               rootNode.get("laws").forEach { lawNode ->
+                   val supersedes = lawNode.get("supersedes")?.asText()
+                   if (supersedes != null && supersedes.isNotBlank()) {
+                       extracted.metadata["supersedes"] = supersedes
+                   }
+               }
             }
 
         } catch (e: Exception) {
@@ -105,6 +133,6 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
 }
 
 data class ExtractedEntities(
-    val rawJson: String
-    // In real impl, map to domain objects
+    val rawJson: String,
+    val metadata: MutableMap<String, String> = mutableMapOf()
 )
