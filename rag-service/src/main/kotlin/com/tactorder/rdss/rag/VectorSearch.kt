@@ -46,13 +46,13 @@ class VectorSearch(
         val cypher = """
             CALL db.index.vector.queryNodes('$indexName', $limit, $vectorList)
             YIELD node, score
-            RETURN ID(node) AS id, node.text AS text, score
+            RETURN elementId(node) AS id, node.text AS text, score
         """
 
         return driver.session().use { session ->
             session.run(cypher).list().map { record ->
                 JsonObject()
-                    .put("id", record.get("id").asLong())
+                    .put("id", record.get("id").asString())
                     .put("text", record.get("text").asString())
                     .put("score", record.get("score").asDouble())
             }.filter { it.getDouble("score") >= minScore }

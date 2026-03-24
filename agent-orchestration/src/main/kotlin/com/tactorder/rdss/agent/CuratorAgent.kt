@@ -27,7 +27,7 @@ class CuratorAgent(private val llm: ChatLanguageModel) {
               "merged_concepts": [{"canonical_name": "Drone Protocol", "variants": ["Drone Protocol", "Protocol"]}]
             }
         """)
-        fun curate(entities: String): String
+        fun curate(@dev.langchain4j.service.V("entities") entities: String): String
     }
 
     private val service = dev.langchain4j.service.AiServices.create(CuratorService::class.java, llm)

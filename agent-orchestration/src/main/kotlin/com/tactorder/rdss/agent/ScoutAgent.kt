@@ -23,7 +23,10 @@ class ScoutAgent(private val llm: ChatLanguageModel) {
               "target_relationship": "e.g. SUPERSEDES, AMENDS, RELATES_TO"
             }
         """)
-        fun planExploration(query: String, context: String): String
+        fun planExploration(
+            @dev.langchain4j.service.V("query") query: String, 
+            @dev.langchain4j.service.V("context") context: String
+        ): String
     }
 
     private val service = dev.langchain4j.service.AiServices.create(ScoutService::class.java, llm)

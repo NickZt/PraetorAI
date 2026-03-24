@@ -15,13 +15,13 @@ class FileWatcher(
     private val processedFiles = mutableMapOf<String, Long>()
 
     fun start() {
-        val ingestPath = config.getString("ingestion.path", "data/ingest")
+        val ingestPath = config.getJsonObject("ingestion")?.getString("path") ?: "data/ingest"
         val absolutePath = Paths.get(ingestPath).toAbsolutePath().toString()
 
         logger.info("Starting Stateful FileWatcher on: $absolutePath")
 
         vertx.setPeriodic(5000) {
-            vertx.fileSystem().readDir(ingestPath) { result ->
+            vertx.fileSystem().readDir(absolutePath) { result ->
                 if (result.succeeded()) {
                     result.result().forEach { filePath ->
                         if (!filePath.endsWith(".tmp") && !filePath.endsWith(".processed")) {

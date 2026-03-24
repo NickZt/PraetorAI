@@ -28,7 +28,10 @@ class AdvisorAgent(private val llm: ChatLanguageModel) {
               "recommendation": "What should the commander do?"
             }
         """)
-        fun evaluateConflict(new_directive: String, existing_context: String): String
+        fun evaluateConflict(
+            @dev.langchain4j.service.V("new_directive") new_directive: String, 
+            @dev.langchain4j.service.V("existing_context") existing_context: String
+        ): String
     }
 
     private val service = dev.langchain4j.service.AiServices.create(AdvisorService::class.java, llm)

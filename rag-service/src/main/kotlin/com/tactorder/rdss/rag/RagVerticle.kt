@@ -33,9 +33,9 @@ class RagVerticle : CoroutineVerticle() {
         appConfig = configLoader.loadConfig()
 
         // Neo4j Driver
-        val uri = appConfig.getString("neo4j.uri", "bolt://localhost:7687")
-        val user = appConfig.getString("neo4j.username", "neo4j")
-        val password = appConfig.getString("neo4j.password", System.getenv("NEO4J_PASSWORD") ?: "password")
+        val uri = appConfig.getJsonObject("neo4j")?.getString("uri") ?: "bolt://localhost:7687"
+        val user = appConfig.getJsonObject("neo4j")?.getString("username") ?: "neo4j"
+        val password = appConfig.getJsonObject("neo4j")?.getString("password") ?: System.getenv("NEO4J_PASSWORD") ?: "password"
         neo4jDriver = GraphDatabase.driver(uri, AuthTokens.basic(user, password))
 
         graphRetriever = GraphRetriever(neo4jDriver)
@@ -106,66 +106,81 @@ class RagVerticle : CoroutineVerticle() {
 
     private suspend fun executeRagPipeline(query: String, date: LocalDate?): String {
         // Init LLM context lazily to avoid race conditions with LLM Gateway startup
-        val apiKey = appConfig.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local")
+        val apiKey = appConfig.getJsonObject("llm")?.getString("api.key") ?: System.getenv("LLM_API_KEY") ?: "sk-local"
         val embeddingModel = OpenAiEmbeddingModel.builder()
-            .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.embedding.model", "native-Qwen3-Embedding-4B-MNN"))
+            .baseUrl(appConfig.getJsonObject("llm")?.getString("base-url") ?: "http://localhost:8080/v1")
+            .modelName(appConfig.getJsonObject("llm")?.getJsonObject("embedding")?.getString("model") ?: "native-Qwen3-Embedding-4B-MNN")
             .apiKey(apiKey)
-            .timeout(Duration.ofSeconds(appConfig.getString("llm.timeout", "180").toLong()))
+            .timeout(Duration.ofSeconds(appConfig.getJsonObject("llm")?.getString("timeout")?.toLong() ?: 180L))
             .build()
 
         vectorSearch = VectorSearch(neo4jDriver, embeddingModel)
 
         val chatModel = OpenAiChatModel.builder()
-            .baseUrl(appConfig.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(appConfig.getString("llm.chat.model", "native-Qwen3-VL-4B-Instruct-Eagle3-MNN"))
+            .baseUrl(appConfig.getJsonObject("llm")?.getString("base-url") ?: "http://localhost:8080/v1")
+            .modelName(appConfig.getJsonObject("llm")?.getJsonObject("chat")?.getString("model") ?: "native-Qwen3-VL-4B-Instruct-Eagle3-MNN")
             .apiKey(apiKey)
-            .timeout(Duration.ofSeconds(appConfig.getString("llm.timeout", "180").toLong()))
+            .timeout(Duration.ofSeconds(appConfig.getJsonObject("llm")?.getString("timeout")?.toLong() ?: 180L))
             .build()
 
-        // 1. Vector Search
-        val searchLimit = appConfig.getInteger("rag.vector-search-limit", 5)
-        val vectorResults = vectorSearch.search(query, limit = searchLimit)
+        // 0. Handle [FASTPATH] Bypass
+        val fastPathRegex = Regex("\\[FASTPATH\\]", RegexOption.IGNORE_CASE)
+        val isFastPath = fastPathRegex.find(query) != null
+        val cleanQuery = query.replace(fastPathRegex, "").trim()
         
-        val nodeIds = vectorResults.map { it.getLong("id") }
+        logger.info("[ORCHESTRATOR] RAG Execution - FastPath: $isFastPath, Original: '$query', Clean: '$cleanQuery'")
+        if (isFastPath) logger.info("🚀 FASTPATH detected! Bypassing agentic orchestration.")
+
+        // 1. Vector Search
+        val searchLimit = appConfig.getJsonObject("rag")?.getInteger("vector-search-limit") ?: 5
+        val vectorResults = vectorSearch.search(cleanQuery, limit = searchLimit)
+        
+        val nodeIds = vectorResults.map { it.getString("id") }
 
         if (nodeIds.isEmpty()) return "No relevant information found in the knowledge base."
 
-        // 2. Graph Traversal (Adaptive Depth with Scout Agent)
-        logger.info("Requesting Scout investigation for query: $query")
-        val scoutRequest = JsonObject()
-            .put("task", "scout")
-            .put("query", query)
-            .put("context", JsonObject().put("ids", JsonArray(nodeIds)))
-        
-        // Scout might suggest deeper traversal or specific relationship follows
-        val scoutResponse = try {
-            vertx.eventBus().request<JsonObject>("agent.orchestrate", scoutRequest).coAwait().body()
-        } catch (e: Exception) {
-            JsonObject().put("hop_required", false)
+        // 2. Graph Traversal (Adaptive vs Base Depth)
+        val baseDepth = appConfig.getJsonObject("rag")?.getInteger("graph-traversal-depth") ?: 2
+        var depth = baseDepth
+
+        if (!isFastPath) {
+            logger.info("Requesting Scout investigation for query: $cleanQuery")
+            val scoutRequest = JsonObject()
+                .put("task", "scout")
+                .put("query", cleanQuery)
+                .put("context", JsonObject().put("ids", JsonArray(nodeIds)))
+            
+            val scoutResponse = try {
+                vertx.eventBus().request<JsonObject>("agent.orchestrate", scoutRequest, io.vertx.core.eventbus.DeliveryOptions().setSendTimeout(180000)).coAwait().body()
+            } catch (e: Exception) {
+                JsonObject().put("hop_required", false)
+            }
+            if (scoutResponse.getBoolean("hop_required", false)) depth += 1
         }
 
-        val baseDepth = appConfig.getInteger("rag.graph-traversal-depth", 2)
-        val depth = if (scoutResponse.getBoolean("hop_required", false)) baseDepth + 1 else baseDepth
         val graphContext = graphRetriever.retrieveContext(nodeIds, depth = depth, queryDate = date)
 
         // 3. Build Context
         val contextText = contextBuilder.buildContext(graphContext)
-      //  logger.info("TODEL RAG Context built for query '$query':\n$contextText")
+        val prompt = "Question: $cleanQuery\nContext: $contextText"
 
-        // 4. Agent Orchestration (Composer) for Final Synthesis
-        val prompt = "Question: $query\nContext: $contextText"
-        val composerRequest = JsonObject()
-            .put("task", "compose")
-            .put("query", query)
-            .put("context", contextText)
-        
-        logger.info("Requesting synthesis from Composer agent...")
-        return try {
-            val composerResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", composerRequest).coAwait().body()
-            composerResponse.getString("answer")
-        } catch (e: Exception) {
-            logger.error("Composer agent failed, falling back to manual prompt", e)
+        // 4. Final Synthesis (Agentic vs Direct)
+        return if (!isFastPath) {
+            val composerRequest = JsonObject()
+                .put("task", "compose")
+                .put("query", cleanQuery)
+                .put("context", contextText)
+            
+            logger.info("Requesting synthesis from Composer agent...")
+            try {
+                val composerResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", composerRequest, io.vertx.core.eventbus.DeliveryOptions().setSendTimeout(180000)).coAwait().body()
+                composerResponse.getString("answer")
+            } catch (e: Exception) {
+                logger.error("Composer agent failed, falling back to manual prompt", e)
+                chatModel.generate(prompt)
+            }
+        } else {
+            logger.info("Directly synthesizing FASTPATH response...")
             chatModel.generate(prompt)
         }
     }

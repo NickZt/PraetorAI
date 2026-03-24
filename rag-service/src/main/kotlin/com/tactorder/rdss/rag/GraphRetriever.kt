@@ -7,7 +7,7 @@ import java.time.LocalDate
 
 class GraphRetriever(private val driver: Driver) {
 
-    fun retrieveContext(nodeIds: List<Long>, depth: Int = 2, queryDate: LocalDate? = null): List<JsonObject> {
+    fun retrieveContext(nodeIds: List<String>, depth: Int = 2, queryDate: LocalDate? = null): List<JsonObject> {
         if (nodeIds.isEmpty()) return emptyList()
 
         val dateParam = queryDate?.toString()?.let { "${it}T00:00:00Z" }
@@ -16,7 +16,7 @@ class GraphRetriever(private val driver: Driver) {
         // If a date is provided, we filter out ActionNodes that violate the StartDate and EndDate bounds.
         val cypher = if (dateParam != null) {
             """
-            MATCH (start) WHERE id(start) IN ${'$'}ids
+            MATCH (start) WHERE elementId(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: ${'$'}depth,
                 relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION|<HAS_CHUNK',
@@ -29,7 +29,7 @@ class GraphRetriever(private val driver: Driver) {
             """
         } else {
              """
-            MATCH (start) WHERE id(start) IN ${'$'}ids
+            MATCH (start) WHERE elementId(start) IN ${'$'}ids
             CALL apoc.path.subgraphAll(start, {
                 maxLevel: ${'$'}depth,
                 relationshipFilter: 'MENTIONS|RELATED_TO|AMENDS|CONTRADICTS|>HAS_ACTION',

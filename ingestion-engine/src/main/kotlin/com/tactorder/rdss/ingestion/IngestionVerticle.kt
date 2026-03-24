@@ -32,29 +32,28 @@ class IngestionVerticle : CoroutineVerticle() {
         val contentExtractor = ContentExtractor()
         val graphWriter = GraphWriter(config)
         val semanticChunker = SemanticChunker(
-            chunkSize = config.getInteger("ingestion.chunk-size", 1000),
-            overlap = config.getInteger("ingestion.chunk-overlap", 200)
+            chunkSize = config.getJsonObject("ingestion")?.getInteger("chunk-size") ?: 1000,
+            overlap = config.getJsonObject("ingestion")?.getInteger("chunk-overlap") ?: 200
         )
 
         val chatModel = OpenAiChatModel.builder()
-            .baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(config.getString("llm.chat.model", "onnx-Qwen2.5-0.5B-Instruct-ONNX"))
-            .apiKey(config.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local"))
-            .timeout(Duration.ofSeconds(config.getString("llm.timeout", "180").toLong()))
+            .baseUrl(config.getJsonObject("llm")?.getString("base-url") ?: "http://localhost:8080/v1")
+            .modelName(config.getJsonObject("llm")?.getJsonObject("chat")?.getString("model") ?: "native-Qwen3-VL-4B-Instruct-Eagle3-MNN")
+            .apiKey(config.getJsonObject("llm")?.getString("api.key") ?: System.getenv("LLM_API_KEY") ?: "sk-local")
+            .timeout(Duration.ofSeconds(config.getJsonObject("llm")?.getString("timeout")?.toLong() ?: 180L))
             .build()
         
         val embeddingModel = OpenAiEmbeddingModel.builder()
-            .baseUrl(config.getString("llm.base-url", "http://localhost:8080/v1"))
-            .modelName(config.getString("llm.embedding.model", "native-Qwen3-Embedding-4B-MNN"))
-            .apiKey(config.getString("llm.api.key", "sk-local"))
-            .timeout(Duration.ofSeconds(config.getString("llm.timeout", "180").toLong()))
+            .baseUrl(config.getJsonObject("llm")?.getString("base-url") ?: "http://localhost:8080/v1")
+            .modelName(config.getJsonObject("llm")?.getJsonObject("embedding")?.getString("model") ?: "native-Qwen3-Embedding-4B-MNN")
+            .apiKey(config.getJsonObject("llm")?.getString("api.key") ?: "sk-local")
+            .timeout(Duration.ofSeconds(config.getJsonObject("llm")?.getString("timeout")?.toLong() ?: 180L))
             .build()
 
-        val chunkSize = config.getInteger("ingestion.chunk-size", 1000)
-        val chunkOverlap = config.getInteger("ingestion.chunk-overlap", 200)
-        val extractionMode = config.getString("extraction.mode", "llm")
+        val chunkSize = config.getJsonObject("ingestion")?.getInteger("chunk-size") ?: 1000
+        val chunkOverlap = config.getJsonObject("ingestion")?.getInteger("chunk-overlap") ?: 200
+        val extractionMode = config.getJsonObject("extraction")?.getString("mode") ?: "llm"
         
-        val semanticChunker = SemanticChunker(chunkSize, chunkOverlap)
         val llmExtractor = LLMExtractor(chatModel)
         val glinerExtractor = GlinerExtractor(vertx, config)
 
@@ -164,7 +163,11 @@ class IngestionVerticle : CoroutineVerticle() {
                             .put("payload", JsonObject().put("entities", JsonArray(mappedList.map { JsonObject.mapFrom(it) })))
                         
                         logger.info("Requesting curation from Agent Orchestrator...")
-                        val curatorResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", orchestrateRequest).coAwait().body()
+                        val curatorResponse = vertx.eventBus().request<JsonObject>(
+                            "agent.orchestrate", 
+                            orchestrateRequest,
+                            io.vertx.core.eventbus.DeliveryOptions().setSendTimeout(180000)
+                        ).coAwait().body()
                         logger.info("Curator response: ${curatorResponse.getString("status", "processed")}")
                         // In future: update mappedList based on curatorResponse
                     } catch (e: Exception) {
