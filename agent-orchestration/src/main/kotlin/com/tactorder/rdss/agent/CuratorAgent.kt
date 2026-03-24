@@ -30,10 +30,17 @@ class CuratorAgent(private val llm: ChatLanguageModel) {
         fun curate(entities: String): String
     }
 
-    // This will be expanded to a proper LangChain4j service.
+    private val service = dev.langchain4j.service.AiServices.create(CuratorService::class.java, llm)
+
     fun process(entities: JsonObject): JsonObject {
-        logger.info("Curator agent processing entities...")
-        // In this version, we'll just simulate canonicalization for Jane Doe.
-        return entities
+        logger.info("Curator agent canonicalizing entities...")
+        
+        return try {
+            val responseText = service.curate(entities.encodePrettily())
+            JsonObject(responseText)
+        } catch (e: Exception) {
+            logger.error("Failed to curate entities", e)
+            entities // Fallback to raw entities
+        }
     }
 }

@@ -1,11 +1,19 @@
-# RDSS Vegetarian Mode Configuration
+# RDSS Integration Config (Private/Tactical)
 neo4j:
   uri: "bolt://localhost:7687"
   username: "neo4j"
   password: "password"
-  database: "neo4j" # Fallback for Community Edition. Use 'neo4jveg' for Enterprise.
 ingestion:
-  path: "data/ingest_veg"
+  path: "/home/nickzt/Projects/TactOrder/RDSS/data/ingest"
+  chunk-size: 1000
+  chunk-overlap: 200
+extraction:
+  mode: "llm"
+gliner:
+  model: "gliner-bi-v2"
+rag:
+  vector-search-limit: 5
+  graph-traversal-depth: 2
 llm:
   base-url: "http://localhost:8080/v1"
   chat:

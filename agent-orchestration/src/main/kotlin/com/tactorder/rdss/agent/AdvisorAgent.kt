@@ -31,9 +31,21 @@ class AdvisorAgent(private val llm: ChatLanguageModel) {
         fun evaluateConflict(new_directive: String, existing_context: String): String
     }
 
+    private val service = dev.langchain4j.service.AiServices.create(AdvisorService::class.java, llm)
+    
     fun analyze(newDirective: JsonObject, context: JsonObject): JsonObject {
-        logger.info("Advisor agent auditing new directive...")
-        // We will implement the evaluation logic in the next steps
-        return JsonObject().put("status", "safe")
+        logger.info("Advisor agent auditing new directive for conflicts...")
+        
+        val newText = newDirective.getString("text", "")
+        val contextText = context.getJsonArray("existing_nodes")?.encodePrettily() ?: "None"
+        
+        return try {
+            val responseText = service.evaluateConflict(newText, contextText)
+            // The service returns a JSON string as per the prompt instructions
+            JsonObject(responseText)
+        } catch (e: Exception) {
+            logger.error("Failed to evaluate conflict", e)
+            JsonObject().put("conflict_found", false).put("status", "error").put("message", e.message)
+        }
     }
 }
