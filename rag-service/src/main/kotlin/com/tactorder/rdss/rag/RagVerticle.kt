@@ -7,6 +7,7 @@ import dev.langchain4j.model.openai.OpenAiEmbeddingModel
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
+import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.launch
 import org.neo4j.driver.AuthTokens
 import org.neo4j.driver.Driver
@@ -103,7 +104,7 @@ class RagVerticle : CoroutineVerticle() {
         }
     }
 
-    private fun executeRagPipeline(query: String, date: LocalDate?): String {
+    private suspend fun executeRagPipeline(query: String, date: LocalDate?): String {
         // Init LLM context lazily to avoid race conditions with LLM Gateway startup
         val apiKey = appConfig.getString("llm.api.key", System.getenv("LLM_API_KEY") ?: "sk-local")
         val embeddingModel = OpenAiEmbeddingModel.builder()
@@ -124,33 +125,47 @@ class RagVerticle : CoroutineVerticle() {
 
         // 1. Vector Search
         val vectorResults = vectorSearch.search(query, limit = 5)
-      //  logger.info("TODEL Vector search results for query '$query': $vectorResults")
         
         val nodeIds = vectorResults.map { it.getLong("id") }
 
         if (nodeIds.isEmpty()) return "No relevant information found in the knowledge base."
 
-        // 2. Graph Traversal (2-hop) with Native Temporal Filtering
-        val graphContext = graphRetriever.retrieveContext(nodeIds, depth = 2, queryDate = date)
+        // 2. Graph Traversal (Adaptive Depth with Scout Agent)
+        logger.info("Requesting Scout investigation for query: $query")
+        val scoutRequest = JsonObject()
+            .put("task", "scout")
+            .put("query", query)
+            .put("context", JsonObject().put("ids", JsonArray(nodeIds)))
+        
+        // Scout might suggest deeper traversal or specific relationship follows
+        val scoutResponse = try {
+            vertx.eventBus().request<JsonObject>("agent.orchestrate", scoutRequest).coAwait().body()
+        } catch (e: Exception) {
+            JsonObject().put("hop_required", false)
+        }
+
+        val depth = if (scoutResponse.getBoolean("hop_required", false)) 3 else 2
+        val graphContext = graphRetriever.retrieveContext(nodeIds, depth = depth, queryDate = date)
 
         // 3. Build Context
         val contextText = contextBuilder.buildContext(graphContext)
       //  logger.info("TODEL RAG Context built for query '$query':\n$contextText")
 
-        // 4. LLM Generation
-        val prompt = """
-            You are an expert legal and military research assistant.
-            Use the following context from the knowledge base to answer the user's question.
-            If the context is insufficient, state that you don't know based on the available data.
-            
-            Question: $query
-            
-            $contextText
-            
-            Answer:
-        """.trimIndent()
-
-        return chatModel.generate(prompt)
+        // 4. Agent Orchestration (Composer) for Final Synthesis
+        val prompt = "Question: $query\nContext: $contextText"
+        val composerRequest = JsonObject()
+            .put("task", "compose")
+            .put("query", query)
+            .put("context", contextText)
+        
+        logger.info("Requesting synthesis from Composer agent...")
+        return try {
+            val composerResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", composerRequest).coAwait().body()
+            composerResponse.getString("answer")
+        } catch (e: Exception) {
+            logger.error("Composer agent failed, falling back to manual prompt", e)
+            chatModel.generate(prompt)
+        }
     }
 
     override suspend fun stop() {

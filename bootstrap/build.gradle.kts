@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":ingestion-engine"))
     implementation(project(":rag-service"))
     implementation(project(":api-gateway"))
+    implementation(project(":agent-orchestration"))
     implementation(libs.neo4j.ogm)
     implementation(libs.neo4j.driver)
     implementation("org.neo4j:neo4j-ogm-bolt-driver:4.0.8")

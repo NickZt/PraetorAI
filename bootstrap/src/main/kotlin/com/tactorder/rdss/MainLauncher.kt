@@ -1,5 +1,6 @@
 package com.tactorder.rdss
 
+import com.tactorder.rdss.agent.OrchestratorVerticle
 import com.tactorder.rdss.api.ApiVerticle
 import com.tactorder.rdss.api.TelegramBotVerticle
 import com.tactorder.rdss.ingestion.IngestionVerticle
@@ -16,6 +17,7 @@ class MainLauncher : AbstractVerticle() {
         logger.info("Starting RDSS Main Launcher...")
 
         deployHelper(LlmManagerVerticle())
+            .compose { deployHelper(OrchestratorVerticle()) }
             .compose { deployHelper(IngestionVerticle()) }
             .compose { deployHelper(RagVerticle()) }
             .compose { deployHelper(ApiVerticle()) }

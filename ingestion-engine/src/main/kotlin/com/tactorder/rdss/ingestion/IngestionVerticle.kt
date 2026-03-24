@@ -4,8 +4,10 @@ import com.tactorder.rdss.config.ConfigLoader
 import com.tactorder.rdss.domain.*
 import dev.langchain4j.model.openai.OpenAiChatModel
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.CoroutineVerticle
+import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -150,7 +152,23 @@ class IngestionVerticle : CoroutineVerticle() {
                             logger.warn("Supersedes target Law $targetNum not found in DB yet.")
                         }
                     }
-                    mapped
+                    val mappedList = mapped.toMutableList()
+
+                    // 4.5. Agent Orchestration (Curator) for post-processing
+                    try {
+                        val orchestrateRequest = JsonObject()
+                            .put("task", "curate")
+                            .put("payload", JsonObject().put("entities", JsonArray(mappedList.map { JsonObject.mapFrom(it) })))
+                        
+                        logger.info("Requesting curation from Agent Orchestrator...")
+                        val curatorResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", orchestrateRequest).coAwait().body()
+                        logger.info("Curator response: ${curatorResponse.getString("status", "processed")}")
+                        // In future: update mappedList based on curatorResponse
+                    } catch (e: Exception) {
+                        logger.warn("Agent Orchestration failed, proceeding with raw entities: ${e.message}")
+                    }
+
+                    mappedList
                 }
 
                 // 5. Save to Graph (including Chunk, Document, and mapped entities)
@@ -167,5 +185,14 @@ class IngestionVerticle : CoroutineVerticle() {
         // Final update to save relations on the document itself
         graphWriter.saveEntities(listOf(documentNode))
         logger.info("Finished processing $filePath")
+
+        // 6. Proactive Advisory Audit (Agent Orchestrator)
+        val auditRequest = JsonObject()
+            .put("task", "audit")
+            .put("new_directive", JsonObject().put("id", documentNode.id).put("title", documentNode.title))
+            .put("context", JsonObject())
+        
+        logger.info("Triggering Proactive Advisor audit for ${documentNode.title}...")
+        vertx.eventBus().send("agent.orchestrate", auditRequest)
     }
 }
