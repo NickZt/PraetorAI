@@ -50,10 +50,13 @@ class IngestionVerticle : CoroutineVerticle() {
             .timeout(Duration.ofSeconds(config.getString("llm.timeout", "180").toLong()))
             .build()
 
+        val chunkSize = config.getInteger("ingestion.chunk-size", 1000)
+        val chunkOverlap = config.getInteger("ingestion.chunk-overlap", 200)
+        val extractionMode = config.getString("extraction.mode", "llm")
+        
+        val semanticChunker = SemanticChunker(chunkSize, chunkOverlap)
         val llmExtractor = LLMExtractor(chatModel)
         val glinerExtractor = GlinerExtractor(vertx, config)
-
-        val extractionMode = config.getString("extraction.mode", System.getenv("EXTRACTION_MODE") ?: "llm")
 
         // Start FileWatcher
         val fileWatcher = FileWatcher(vertx, config)

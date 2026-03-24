@@ -14,7 +14,8 @@ class MainLauncher : AbstractVerticle() {
     private val logger = LoggerFactory.getLogger(MainLauncher::class.java)
 
     override fun start(startPromise: Promise<Void>) {
-        logger.info("Starting RDSS Main Launcher...")
+        val mode = System.getenv("RDSS_MODE")?.lowercase() ?: "default"
+        logger.info("Starting RDSS Main Launcher [MODE: ${mode.uppercase()}]...")
 
         deployHelper(LlmManagerVerticle())
             .compose { deployHelper(OrchestratorVerticle()) }

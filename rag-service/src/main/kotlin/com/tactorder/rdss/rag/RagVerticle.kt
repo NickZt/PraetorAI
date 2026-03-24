@@ -124,7 +124,8 @@ class RagVerticle : CoroutineVerticle() {
             .build()
 
         // 1. Vector Search
-        val vectorResults = vectorSearch.search(query, limit = 5)
+        val searchLimit = appConfig.getInteger("rag.vector-search-limit", 5)
+        val vectorResults = vectorSearch.search(query, limit = searchLimit)
         
         val nodeIds = vectorResults.map { it.getLong("id") }
 
@@ -144,7 +145,8 @@ class RagVerticle : CoroutineVerticle() {
             JsonObject().put("hop_required", false)
         }
 
-        val depth = if (scoutResponse.getBoolean("hop_required", false)) 3 else 2
+        val baseDepth = appConfig.getInteger("rag.graph-traversal-depth", 2)
+        val depth = if (scoutResponse.getBoolean("hop_required", false)) baseDepth + 1 else baseDepth
         val graphContext = graphRetriever.retrieveContext(nodeIds, depth = depth, queryDate = date)
 
         // 3. Build Context

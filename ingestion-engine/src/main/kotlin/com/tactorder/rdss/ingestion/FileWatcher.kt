@@ -37,7 +37,7 @@ class FileWatcher(
                         }
                     }
                     
-                    // Cleanup: Remove missing files from the map to prevent memory leak
+                    // Cleanup missing files
                     val currentFiles = result.result().toSet()
                     processedFiles.keys.removeIf { !currentFiles.contains(it) }
                 } else {

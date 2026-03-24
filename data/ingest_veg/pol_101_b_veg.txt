@@ -1,0 +1,6 @@
+
+PROJECT POLICY 101-B
+Date: 2026-05-10
+Subject: General Data Access
+Policy: This supersedes Policy 101-A. All Junior Analysts must now have a maximum data limit of 5GB.
+Authorized Officer: Alice Smith.

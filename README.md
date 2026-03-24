@@ -73,7 +73,8 @@ AI Models & Metrics Guarantees:
 - **Zero-Shot NER**: `gliner-bi-base-v2.0` (Native MNN implementation).
   - **Rank Support**: Extract names (e.g., "Jane Doe") and ranks (e.g., "Commander") as distinct properties to prevent entity collision.
 - **Graph Retrieval**: LangChain4j + Cypher APOC Traversal.
-  - **Experiment 3 Guarantee**: Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries with 180s delivery timeouts for deep reasoning.
+  - **Tunable Density**: Search limits, retrieval depth, and chunking parameters are fully configurable via `config.yaml`.
+  - **Temporal Integrity**: Temporal queries successfully deploy Cypher-filters across `ActionNode` boundaries.
 
 ## How to Run
 
@@ -104,18 +105,25 @@ Run the unified launcher via Gradle. This starts the Ingestion Engine, RAG Servi
 
 ### 4. Run End-to-End Tests
 
-After starting the application, you can run the automated E2E testing suite:
+Praetor AI maintains dual test suites for standard and sanitized verification:
 
 ```bash
 # Ensure you have the Python dependencies
-/home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python -m pip install requests neo4j
+pip install requests neo4j
 
-```bash
-# Run the test suite
-/home/nickzt/Projects/TactOrder/RDSS/.venv/bin/python scripts/run_e2e_document_test.py
+# 1. Run Internal Tactical Tests (Requires test_suite/config.yaml)
+python3 test_suite/run_e2e_document_test.py
+
+# 2. Run Sanitized "Vegetarian" Tests (Requires test_suite_veg/config.yaml)
+python3 test_suite_veg/run_e2e_veg_test.py
 ```
 
-### 5. Graph Visualization Dashboard
+### 5. Sanitized "Vegetarian" Infrastructure
+For open-source safety, use the **Vegetarian Infrastructure**. Isolation is handled via suite-specific configurations located in `test_suite_veg/`. To run in "Veg" mode, simply copy the veg config to `conf/config.yaml` before starting the application. 
+
+Refer to [Development Workflow](docs/development_workflow.md) for detailed isolation protocols.
+
+### 6. Graph Visualization Dashboard
 
 Praetor AI includes a built-in interactive knowledge graph dashboard powered by Cytoscape.js.
 

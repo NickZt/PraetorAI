@@ -38,8 +38,6 @@ class GraphWriter(private val config: io.vertx.core.json.JsonObject) {
         val session = getSession()
         session.beginTransaction().use { tx ->
             entities.forEach { entity ->
-                // DEPRECATED: Standard OGM save() issues destructive MERGE operations on properties.
-                // Refactor to use appendActionNode() for temporal history.
                 session.save(entity)
             }
             tx.commit()
