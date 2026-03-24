@@ -12,17 +12,23 @@ import org.slf4j.LoggerFactory
 interface ExtractionService {
     @UserMessage(
         """
-        Extract specific entities mentioned in the text (People, Laws, Concepts, Sections).
-        For People, extract the proper name (e.g., "Jane Doe") into the "name" field, and any title or rank (e.g., "Commander", "Sergeant") into the "rank" field.
-        Put description of their role (e.g., "Authorized Officer") in the "role" field.
+        Extract specific entities mentioned in the text:
+        1. **Laws/Directives**: ID number (e.g. "104-A") and title.
+        2. **Supersession**: Identify if this document REPLACES or SUPERSEDES another (e.g. "supersedes 104-A").
+        3. **People**: Full name AND rank/title (e.g. "Commander", "Sergeant") as separate fields.
+        4. **Concepts & Sections**: Key topics and numbered paragraphs.
 
-        Return a JSON object with this structure:
+        CRITICAL for 104-B: The text says "This supersedes Directive 104-A". You MUST extract "104-A" as the "supersedes" value.
+
+        JSON structure:
         {
-            "concepts": ["topic1", "topic2"],
-            "laws": [{"number": "law_001", "title": "Law Title", "type": "law_type", "supersedes": "optional_number_of_law_it_replaces"}],
-            "sections": [{"number": "sec_01", "content": "text_summary"}],
-            "people": [{"name": "person_name", "role": "person_role", "rank": "person_rank"}]
+            "concepts": ["topic1"],
+            "laws": [{"number": "104-B", "title": "...", "type": "directive", "supersedes": "104-A"}],
+            "sections": [{"number": "sec_01", "content": "..."}],
+            "people": [{"name": "Jane Doe", "rank": "Commander", "role": "Authorized Officer"}]
         }
+
+        Return ONLY the JSON object.
         
         Strictly use the fields above but fill them with real data from the text. 
         If an entity type is not present, return an empty list: [].
@@ -52,6 +58,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
         try {
             // Read raw JSON returned by Gateway which might contain markdown formatting
             var rawJson = extracted.rawJson.trim()
+            logger.info("LLM Raw Extraction JSON: $rawJson")
             if (rawJson.startsWith("```json")) {
                 rawJson = rawJson.removePrefix("```json").removeSuffix("```").trim()
             }
@@ -78,6 +85,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                         title = lawNode.get("title")?.asText() ?: "Unknown Title"
                     )
                     parentDocument.concepts.forEach { law.concepts.add(it) } // Inherit concepts
+                    parentDocument.laws.add(law) // Link to Document
                     entities.add(law)
                 }
             }
@@ -101,6 +109,7 @@ class LLMExtractor(private val chatModel: ChatLanguageModel) {
                         role = pNode.get("role")?.asText(),
                         rank = pNode.get("rank")?.asText()
                     )
+                    parentDocument.people.add(person) // Link to Document
                     entities.add(person)
                 }
             }

@@ -1,5 +1,8 @@
 package com.tactorder.rdss.ingestion
 
+import com.tactorder.rdss.domain.Law
+import org.neo4j.ogm.cypher.ComparisonOperator
+import org.neo4j.ogm.cypher.Filter
 import org.neo4j.ogm.config.Configuration
 import org.neo4j.ogm.session.Session
 import org.neo4j.ogm.session.SessionFactory
@@ -74,4 +77,8 @@ class GraphWriter(private val config: io.vertx.core.json.JsonObject) {
 
     // Specific methods for extracted JSON to Domain Entity mapping would go here
     // or in a separate mapper service.
+    fun findLawByNumber(number: String): Law? {
+        val session = getSession()
+        return session.loadAll(Law::class.java, Filter("number", ComparisonOperator.EQUALS, number)).firstOrNull()
+    }
 }

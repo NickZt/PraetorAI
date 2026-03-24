@@ -135,7 +135,22 @@ class IngestionVerticle : CoroutineVerticle() {
                 } else {
                     logger.info("Extracting chunk through LLM Qwen Chat...")
                     val extractedEntities = llmExtractor.extract(chunkText)
-                    llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                    val mapped = llmExtractor.mapToDomainEntities(extractedEntities, documentNode)
+                    
+                    // Automated Supersedes Linking
+                    val targetNum = extractedEntities.metadata["supersedes"]
+                    if (targetNum != null) {
+                        val targetLaw = graphWriter.findLawByNumber(targetNum)
+                        if (targetLaw != null) {
+                            logger.info("Found supersedes target: Law $targetNum. Linking...")
+                            mapped.filterIsInstance<Law>().forEach { currentLaw ->
+                                currentLaw.supersedes.add(targetLaw)
+                            }
+                        } else {
+                            logger.warn("Supersedes target Law $targetNum not found in DB yet.")
+                        }
+                    }
+                    mapped
                 }
 
                 // 5. Save to Graph (including Chunk, Document, and mapped entities)

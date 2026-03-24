@@ -27,3 +27,4 @@ scripts/__pycache__/
 /gradle/wrapper/gradle-wrapper.jar
 /UI/Research-DSS/gradle/wrapper/gradle-wrapper.jar
 /.kotlin/
+/bootstrap/file-uploads/

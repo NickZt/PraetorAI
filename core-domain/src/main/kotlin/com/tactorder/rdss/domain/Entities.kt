@@ -17,6 +17,12 @@ data class Document(
 
     @Relationship(type = "HAS_CHUNK")
     var chunks: MutableList<Chunk> = mutableListOf()
+
+    @Relationship(type = "HAS_LAW")
+    var laws: MutableSet<Law> = mutableSetOf()
+
+    @Relationship(type = "HAS_PERSON")
+    var people: MutableSet<Person> = mutableSetOf()
 }
 
 @NodeEntity
