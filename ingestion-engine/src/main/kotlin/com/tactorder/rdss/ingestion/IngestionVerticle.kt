@@ -63,19 +63,24 @@ class IngestionVerticle : CoroutineVerticle() {
 
         val ingestionMutex = Mutex()
 
-        // Setup EventBus Listener for New Files
+        // Setup EventBus Listener for New Files (Multi-Modal Dispatcher)
         vertx.eventBus().consumer<String>("ingestion.new_file") { message ->
             val filePath = message.body()
-            logger.info("Received new file event for: $filePath")
+            val extension = File(filePath).extension.lowercase()
+            logger.info("Received new file event for: $filePath (Type: $extension)")
 
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     ingestionMutex.withLock {
-                    processFile(filePath, contentExtractor, semanticChunker, llmExtractor, glinerExtractor, graphWriter, embeddingModel, extractionMode)
+                        when (extension) {
+                            "jpg", "jpeg", "png" -> processImageFile(filePath, graphWriter)
+                            "mp3", "wav" -> processAudioFile(filePath, graphWriter)
+                            else -> processTextFile(filePath, contentExtractor, semanticChunker, llmExtractor, glinerExtractor, graphWriter, embeddingModel, extractionMode)
+                        }
                     }
                     message.reply(JsonObject().put("status", "success"))
                 } catch (e: Exception) {
-                    logger.error("Failed to process file: $filePath", e)
+                    logger.error("Failed to process multi-modal file: $filePath", e)
                     message.fail(500, e.message)
                 }
             }
@@ -84,7 +89,7 @@ class IngestionVerticle : CoroutineVerticle() {
         logger.info("IngestionVerticle started successfully.")
     }
 
-    private suspend fun processFile(
+    private suspend fun processTextFile(
         filePath: String,
         contentExtractor: ContentExtractor,
         semanticChunker: SemanticChunker,
@@ -95,17 +100,12 @@ class IngestionVerticle : CoroutineVerticle() {
         extractionMode: String
     ) {
         val file = File(filePath)
-        if (!file.exists()) {
-            logger.error("File does not exist: $filePath")
-            return
-        }
-
         val fileBytes = file.readBytes()
         val md5Hash = MessageDigest.getInstance("MD5").digest(fileBytes).joinToString("") { "%02x".format(it) }
         val fileSize = file.length()
 
         if (graphWriter.isDocumentIngested(md5Hash)) {
-            logger.warn("Document $filePath (MD5: $md5Hash) already ingested. Skipping deduplication.")
+            logger.warn("Document $filePath (MD5: $md5Hash) already ingested. Skipping.")
             return
         }
 
@@ -200,5 +200,58 @@ class IngestionVerticle : CoroutineVerticle() {
         
         logger.info("Triggering Proactive Advisor audit for ${documentNode.title}...")
         vertx.eventBus().send("agent.orchestrate", auditRequest)
+    }
+
+    private suspend fun processImageFile(filePath: String, graphWriter: GraphWriter) {
+        val file = File(filePath)
+        val fileBytes = file.readBytes()
+        val md5Hash = MessageDigest.getInstance("MD5").digest(fileBytes).joinToString("") { "%02x".format(it) }
+        
+        logger.info("Processing Image: $filePath (MD5: $md5Hash)")
+        
+        // 1. Trigger VisionAgent for Captioning
+        val captionRequest = JsonObject()
+            .put("task", "vision")
+            .put("payload", JsonObject().put("image_path", filePath).put("task", "caption"))
+        
+        val captionResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", captionRequest).coAwait().body()
+        val description = captionResponse.getString("analysis", "No caption generated.")
+
+        // 2. Trigger VisionAgent for OCR
+        val ocrRequest = JsonObject()
+            .put("task", "vision")
+            .put("payload", JsonObject().put("image_path", filePath).put("task", "ocr"))
+        
+        val ocrResponse = vertx.eventBus().request<JsonObject>("agent.orchestrate", ocrRequest).coAwait().body()
+        val ocrText = ocrResponse.getString("analysis", "")
+
+        // 3. Save to Graph
+        val imageNode = Image(
+            name = file.name,
+            uri = filePath,
+            description = description,
+            ocrText = ocrText,
+            md5Hash = md5Hash
+        )
+        graphWriter.saveEntities(listOf(imageNode))
+        logger.info("Saved Image node: ${imageNode.name} with MD5: $md5Hash")
+    }
+
+    private suspend fun processAudioFile(filePath: String, graphWriter: GraphWriter) {
+        val file = File(filePath)
+        val fileBytes = file.readBytes()
+        val md5Hash = MessageDigest.getInstance("MD5").digest(fileBytes).joinToString("") { "%02x".format(it) }
+        
+        logger.info("Processing Audio: $filePath (MD5: $md5Hash)")
+        
+        // Audio processing (AcousticAgent) will be implemented in Step 2 of Phase 5
+        val audioNode = Audio(
+            name = file.name,
+            uri = filePath,
+            transcript = "Pending transcription (AcousticAgent)",
+            md5Hash = md5Hash
+        )
+        graphWriter.saveEntities(listOf(audioNode))
+        logger.info("Saved stub Audio node: ${audioNode.name}")
     }
 }

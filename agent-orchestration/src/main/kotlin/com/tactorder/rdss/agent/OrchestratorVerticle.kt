@@ -17,6 +17,7 @@ class OrchestratorVerticle : AbstractVerticle() {
     private lateinit var scout: ScoutAgent
     private lateinit var advisor: AdvisorAgent
     private lateinit var composer: ComposerAgent
+    private lateinit var vision: VisionAgent
 
     override fun start() {
         val configLoader = ConfigLoader(vertx)
@@ -37,6 +38,7 @@ class OrchestratorVerticle : AbstractVerticle() {
             scout = ScoutAgent(llm)
             advisor = AdvisorAgent(llm)
             composer = ComposerAgent(llm)
+            vision = VisionAgent(appConfig)
             
             // Listen for orchestration requests
             vertx.eventBus().consumer<JsonObject>("agent.orchestrate") { message ->
@@ -68,6 +70,7 @@ class OrchestratorVerticle : AbstractVerticle() {
             "scout" -> scout.scout(data.getString("query"), data.getJsonObject("context"))
             "audit" -> advisor.analyze(data.getJsonObject("new_directive"), data.getJsonObject("context"))
             "compose" -> JsonObject().put("answer", composer.synthesize(data.getString("query"), data.getString("context")))
+            "vision" -> vision.analyzeImage(data.getJsonObject("payload"))
             else -> {
                 logger.warn("Unknown task type: $task")
                 JsonObject().put("error", "Unknown task type: $task")

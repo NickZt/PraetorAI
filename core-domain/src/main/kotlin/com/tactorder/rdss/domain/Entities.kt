@@ -97,3 +97,28 @@ data class DateNode(
     @Id @GeneratedValue var id: Long? = null,
     var date: LocalDate
 )
+
+@NodeEntity
+data class Image(
+    @Id @GeneratedValue var id: Long? = null,
+    var name: String,
+    var uri: String,
+    var description: String? = null,
+    var ocrText: String? = null,
+    var md5Hash: String? = null
+) {
+    @Relationship(type = "MENTIONS")
+    var concepts: MutableSet<Concept> = mutableSetOf()
+}
+
+@NodeEntity
+data class Audio(
+    @Id @GeneratedValue var id: Long? = null,
+    var name: String,
+    var uri: String,
+    var transcript: String? = null,
+    var md5Hash: String? = null
+) {
+    @Relationship(type = "MENTIONS")
+    var concepts: MutableSet<Concept> = mutableSetOf()
+}
